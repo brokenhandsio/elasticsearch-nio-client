@@ -4,7 +4,7 @@ import SotoElasticsearchService
 //import AsyncHTTPClient
 
 extension ElasticsearchClient {
-    func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
+    public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
         let url = baseURL(path: "/\(indexName)/_doc")
         do {
             let body = try AWSPayload.data(JSONEncoder().encode(document))
@@ -16,7 +16,7 @@ extension ElasticsearchClient {
         }
     }
 
-    func updateDocument<Document: Encodable>(_ document: Document, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
+    public func updateDocument<Document: Encodable>(_ document: Document, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
         let url = baseURL(path: "/\(indexName)/_doc/\(id)")
         do {
             let body = try AWSPayload.data(JSONEncoder().encode(document))
@@ -28,12 +28,12 @@ extension ElasticsearchClient {
         }
     }
 
-    func deleteDocument(id: String, from indexName: String) -> EventLoopFuture<ESDeleteDocumentResponse> {
+    public func deleteDocument(id: String, from indexName: String) -> EventLoopFuture<ESDeleteDocumentResponse> {
         let url = baseURL(path: "/\(indexName)/_doc/\(id)")
         return sendRequest(url: url, method: .DELETE, headers: .init())
     }
 
-    func searchDocuments<Document: Decodable>(from indexName: String, searchTerm: String) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+    public func searchDocuments<Document: Decodable>(from indexName: String, searchTerm: String) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
         let url = baseURL(
             path: "/\(indexName)/_search",
             queryItems: [URLQueryItem(name: "q", value: searchTerm)]
@@ -41,7 +41,7 @@ extension ElasticsearchClient {
         return sendRequest(url: url, method: .GET, headers: .init())
     }
 
-    func searchDocumentsCount(from indexName: String, searchTerm: String?) -> EventLoopFuture<ESCountResponse> {
+    public func searchDocumentsCount(from indexName: String, searchTerm: String?) -> EventLoopFuture<ESCountResponse> {
         var queryItems = [URLQueryItem]()
         if let searchTermToUse = searchTerm {
             queryItems.append(URLQueryItem(name: "q", value: searchTermToUse))
@@ -53,7 +53,7 @@ extension ElasticsearchClient {
         return sendRequest(url: url, method: .GET, headers: .init())
     }
 
-    func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
+    public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
         let url = baseURL(path: "/\(name)")
         return sendRequest(url: url, method: .DELETE, headers: .init())
     }

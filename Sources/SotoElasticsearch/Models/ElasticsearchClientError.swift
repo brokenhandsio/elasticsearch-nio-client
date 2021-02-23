@@ -1,3 +1,3 @@
-struct ElasticSearchClientError: Error {
-    let message: String
+public struct ElasticSearchClientError: Error {
+    public let message: String
 }

@@ -1,5 +1,5 @@
 import Foundation
 
-struct ESDeleteIndexResponse: Codable {
-    let acknowledged: Bool?
+public struct ESDeleteIndexResponse: Codable {
+    public let acknowledged: Bool?
 }

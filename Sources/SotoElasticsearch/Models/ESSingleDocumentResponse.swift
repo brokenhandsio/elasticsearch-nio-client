@@ -1,10 +1,10 @@
 import Foundation
 
 public struct ESGetSingleDocumentResponse<Document: Decodable>: Decodable {
-    let id: String
-    let index: String
-    let version: Int?
-    let source: Document
+    public let id: String
+    public let index: String
+    public let version: Int?
+    public let source: Document
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
