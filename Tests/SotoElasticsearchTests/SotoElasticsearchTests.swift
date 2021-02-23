@@ -48,26 +48,6 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.count, 5)
     }
 
-//    func testSearchingCategories() throws {
-//        let storeID = UUID()
-//        let esIndex = "store-\(storeID.uuidString.lowercased())-categories"
-//        let category1 = TestDataBuilder.anyCategory(storeID: storeID, name: "Fresh Meat")
-//        let category2 = TestDataBuilder.anyCategory(storeID: storeID, name: "Cured Meat")
-//        let category3 = TestDataBuilder.anyCategory(storeID: storeID, name: "Bread")
-//        let category4 = TestDataBuilder.anyCategory(storeID: storeID, name: "Toiletries")
-//
-//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category1, in: esIndex).wait()
-//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category2, in: esIndex).wait()
-//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category3, in: esIndex).wait()
-//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category4, in: esIndex).wait()
-//
-//        // This is required for ES to settle and load the indexes to return the right results
-//        Thread.sleep(forTimeInterval: 1.0)
-//
-//        let results = try elasticsearchSearchRepository.searchCategories(term: "meat", storeID: storeID).wait()
-//        XCTAssertEqual(results.count, 2)
-//    }
-
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
