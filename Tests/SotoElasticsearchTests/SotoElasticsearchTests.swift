@@ -4,6 +4,10 @@ import NIO
 import AsyncHTTPClient
 import SotoElasticsearchService
 
+struct SomeItem: Codable {
+    let name: String
+}
+
 class ElasticSearchIntegrationTests: XCTestCase {
 
     // MARK: - Properties
@@ -11,6 +15,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
     var client: ElasticsearchClient!
     var httpClient: HTTPClient!
     var awsClient: AWSClient!
+    let indexName = "some-index"
 
     // MARK: - Overrides
     override func setUpWithError() throws {
@@ -30,79 +35,41 @@ class ElasticSearchIntegrationTests: XCTestCase {
 
     // MARK: - Tests
     func testSearchingItems() throws {
-        let storeID = UUID()
-        try setupItems(storeID: storeID)
+        try setupItems()
 
-        let results = try elasticsearchSearchRepository.searchItems(term: "Apples", storeID: storeID, departmentID: nil).wait()
-        XCTAssertEqual(results.count, 5)
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocuments(from: indexName, searchTerm: "Apples").wait()
+        XCTAssertEqual(results.hits.hits.count, 5)
     }
 
     func testSearchItemsCount() throws {
-        let storeID = UUID()
-        try setupItems(storeID: storeID)
+        try setupItems()
 
-        let results = try elasticsearchSearchRepository.searchItemsCount(term: "Apples", storeID: storeID, departmentID: nil).wait()
+        let results = try client.searchDocumentsCount(from: indexName, searchTerm: "Apples").wait()
         XCTAssertEqual(results.count, 5)
     }
 
-    func testGettingCountOfAllItems() throws {
-        let storeID = UUID()
-        try setupItems(storeID: storeID)
-
-        let result = try elasticsearchSearchRepository.searchItemsCount(term: nil, storeID: storeID, departmentID: nil).wait()
-        XCTAssertEqual(result.count, 10)
-    }
-
-    func testSearchingItemsInDepartment() throws {
-        let storeID = UUID()
-        let department = UUID()
-        try setupItems(storeID: storeID, departmentIDToUse: department)
-
-        let results = try elasticsearchSearchRepository.searchItems(term: "Apples", storeID: storeID, departmentID: department).wait()
-        XCTAssertEqual(results.count, 1)
-    }
-
-    func testSearchingItemsInDepartmentCount() throws {
-        let storeID = UUID()
-        let department = UUID()
-        try setupItems(storeID: storeID, departmentIDToUse: department)
-
-        let result = try elasticsearchSearchRepository.searchItemsCount(term: "Apples", storeID: storeID, departmentID: department).wait()
-        XCTAssertEqual(result.count, 1)
-    }
-
-    func testGettingCountOfItemsInDepartment() throws {
-        let storeID = UUID()
-        let department = UUID()
-        try setupItems(storeID: storeID, departmentIDToUse: department)
-
-        let result = try elasticsearchSearchRepository.searchItemsCount(term: nil, storeID: storeID, departmentID: department).wait()
-        XCTAssertEqual(result.count, 2)
-    }
-
-    func testSearchingCategories() throws {
-        let storeID = UUID()
-        let esIndex = "store-\(storeID.uuidString.lowercased())-categories"
-        let category1 = TestDataBuilder.anyCategory(storeID: storeID, name: "Fresh Meat")
-        let category2 = TestDataBuilder.anyCategory(storeID: storeID, name: "Cured Meat")
-        let category3 = TestDataBuilder.anyCategory(storeID: storeID, name: "Bread")
-        let category4 = TestDataBuilder.anyCategory(storeID: storeID, name: "Toiletries")
-
-        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category1, in: esIndex).wait()
-        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category2, in: esIndex).wait()
-        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category3, in: esIndex).wait()
-        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category4, in: esIndex).wait()
-
-        // This is required for ES to settle and load the indexes to return the right results
-        Thread.sleep(forTimeInterval: 1.0)
-
-        let results = try elasticsearchSearchRepository.searchCategories(term: "meat", storeID: storeID).wait()
-        XCTAssertEqual(results.count, 2)
-    }
+//    func testSearchingCategories() throws {
+//        let storeID = UUID()
+//        let esIndex = "store-\(storeID.uuidString.lowercased())-categories"
+//        let category1 = TestDataBuilder.anyCategory(storeID: storeID, name: "Fresh Meat")
+//        let category2 = TestDataBuilder.anyCategory(storeID: storeID, name: "Cured Meat")
+//        let category3 = TestDataBuilder.anyCategory(storeID: storeID, name: "Bread")
+//        let category4 = TestDataBuilder.anyCategory(storeID: storeID, name: "Toiletries")
+//
+//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category1, in: esIndex).wait()
+//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category2, in: esIndex).wait()
+//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category3, in: esIndex).wait()
+//        _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(category4, in: esIndex).wait()
+//
+//        // This is required for ES to settle and load the indexes to return the right results
+//        Thread.sleep(forTimeInterval: 1.0)
+//
+//        let results = try elasticsearchSearchRepository.searchCategories(term: "meat", storeID: storeID).wait()
+//        XCTAssertEqual(results.count, 2)
+//    }
 
     // MARK: - Private
-    private func setupItems(storeID: UUID, departmentIDToUse: UUID = UUID()) throws {
-        let esIndex = "store-\(storeID.uuidString.lowercased())-items"
+    private func setupItems() throws {
         for index in 1...10 {
             let name: String
             if index % 2 == 0 {
@@ -110,14 +77,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
             } else {
                 name = "Some \(index) Bananas"
             }
-            let departmentID: UUID
-            if index % 5 == 0 {
-                departmentID = departmentIDToUse
-            } else {
-                departmentID = UUID()
-            }
-            let item = TestDataBuilder.anySearchItemItem(storeID: storeID, departmentID: departmentID, name: name, upc: "abc-\(index)")
-            _ = try elasticsearchSearchRepository.elasticSearchClient.createDocument(item, in: esIndex).wait()
+            let item = SomeItem(name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
         }
 
         // This is required for ES to settle and load the indexes to return the right results
