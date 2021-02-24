@@ -2,13 +2,35 @@ import Foundation
 import NIO
 import SotoElasticsearchService
 
+struct BulkCreate: Codable {
+    let create: BulkCreateBody
+}
+
+struct BulkCreateBody: Codable {
+    let index: String
+    let id: String
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case index = "_index"
+    }
+}
+
 extension ElasticsearchClient {
     public func bulkCreate<Document: Encodable & Identifiable>(_ items: [DocumentWithIndex<Document>]) -> EventLoopFuture<ESBulkResponse> {
         do {
             let url = try buildURL(path: "/_bulk")
-            
-//            let body = try AWSPayload.data(JSONEncoder().encode(document))
-            let body = AWSPayload.empty
+            var bodyString = ""
+            for item in items {
+                let createInfo = BulkCreate(create: BulkCreateBody(index: item.index, id: "\(item.document.id)"))
+                let createLine = try self.jsonEncoder.encode(createInfo)
+                let dataLine = try self.jsonEncoder.encode(item.document)
+                guard let createLineString = String(data: createLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
+                    throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String")
+                }
+                bodyString.append("\(createLineString)\n\(dataLineString)\n")
+            }
+            let body = AWSPayload.string(bodyString)
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
             return sendRequest(url: url, method: .POST, headers: headers, body: body)
