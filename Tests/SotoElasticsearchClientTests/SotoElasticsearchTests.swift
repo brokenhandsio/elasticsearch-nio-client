@@ -41,6 +41,13 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.hits.hits.count, 5)
     }
 
+    func testSearchingItemsWithTypeProvided() throws {
+        try setupItems()
+
+        let results = try client.searchDocuments(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
+        XCTAssertEqual(results.hits.hits.count, 5)
+    }
+
     func testSearchItemsCount() throws {
         try setupItems()
 

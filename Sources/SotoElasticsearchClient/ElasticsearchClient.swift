@@ -82,7 +82,7 @@ public struct ElasticsearchClient {
 
 //// MARK: - Helper
 extension ElasticsearchClient {
-    func baseURL(path: String, queryItems: [URLQueryItem] = []) -> String {
+    func baseURL(path: String, queryItems: [URLQueryItem] = []) throws -> String {
         var urlComponents = URLComponents()
         urlComponents.scheme = scheme
         urlComponents.host = host
@@ -92,8 +92,8 @@ extension ElasticsearchClient {
         urlComponents.path = path
         urlComponents.queryItems = queryItems
         guard let url = urlComponents.url else {
-            self.logger.critical("malformed url: \(urlComponents)")
-            fatalError()
+            self.logger.debug("malformed url: \(urlComponents)")
+            throw ElasticSearchClientError(message: "malformed url: \(urlComponents)")
         }
         return url.absoluteString
     }
