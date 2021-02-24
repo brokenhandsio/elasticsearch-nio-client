@@ -138,7 +138,9 @@ class ElasticSearchIntegrationTests: XCTestCase {
 
         let itemsWithIndex = items.map { DocumentWithIndex(index: self.indexName, document: $0) }
         let response = try client.bulkCreate(itemsWithIndex).wait()
-
+        XCTAssertEqual(response.errors, false)
+        XCTAssertEqual(response.items.count, 10)
+        XCTAssertEqual(response.items.first?.create.result, "created")
         Thread.sleep(forTimeInterval: 1.0)
 
         let results = try client.searchDocumentsCount(from: indexName, searchTerm: nil).wait()
