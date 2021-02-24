@@ -147,6 +147,26 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.count, 10)
     }
 
+    func testBulkCreateUpdateDeleteIndex() throws {
+        let item1 = SomeItem(id: UUID(), name: "Item 1")
+        let item2 = SomeItem(id: UUID(), name: "Item 2")
+        let item3 = SomeItem(id: UUID(), name: "Item 3")
+        let item4 = SomeItem(id: UUID(), name: "Item 4")
+        let bulkOperation = [
+            ESBulkOperation(operationType: .create, index: self.indexName, id: item1.id.uuidString, document: item1),
+            ESBulkOperation(operationType: .index, index: self.indexName, id: item2.id.uuidString, document: item2),
+            ESBulkOperation(operationType: .update, index: self.indexName, id: item3.id.uuidString, document: item3),
+            ESBulkOperation(operationType: .delete, index: self.indexName, id: item4.id.uuidString, document: item4),
+        ]
+
+        let response = try client.bulk(bulkOperation).wait()
+        XCTAssertEqual(response.items.count, 4)
+        XCTAssertNotNil(response.items[0].create)
+        XCTAssertNotNil(response.items[1].index)
+        XCTAssertNotNil(response.items[2].update)
+        XCTAssertNotNil(response.items[3].delete)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
