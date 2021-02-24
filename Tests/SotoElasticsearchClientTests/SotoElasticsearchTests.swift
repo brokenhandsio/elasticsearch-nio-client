@@ -76,6 +76,24 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(response.result, "updated")
     }
 
+    func testDeletingDocument() throws {
+        try setupItems()
+        let item = SomeItem(id: UUID(), name: "Banana")
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let results = try client.searchDocumentsCount(from: indexName, searchTerm: "Banana").wait()
+        XCTAssertEqual(results.count, 1)
+        Thread.sleep(forTimeInterval: 0.5)
+
+        let response = try client.deleteDocument(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(response.result, "deleted")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        let updatedResults = try client.searchDocumentsCount(from: indexName, searchTerm: "Banana").wait()
+        XCTAssertEqual(updatedResults.count, 0)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {

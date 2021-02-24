@@ -1,11 +1,11 @@
 import Foundation
 
-public struct ESCreateDocumentResponse: Codable {
+public struct ESDeleteDocumentResponse: Codable {
     public let id: String
     public let index: String
     public let version: Int?
     public let result: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case index = "_index"
@@ -13,5 +13,3 @@ public struct ESCreateDocumentResponse: Codable {
         case result
     }
 }
-
-public typealias ESUpdateDocumentResponse = ESCreateDocumentResponse
