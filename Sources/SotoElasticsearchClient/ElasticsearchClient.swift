@@ -14,8 +14,9 @@ public struct ElasticsearchClient {
     let port: Int?
     let username: String?
     let password: String?
+    let region: Region?
 
-    public init(eventLoop: EventLoop, logger: Logger, awsClient: AWSClient, httpClient: HTTPClient, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil) {
+    public init(eventLoop: EventLoop, logger: Logger, awsClient: AWSClient, httpClient: HTTPClient, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, region: Region? = nil) {
         self.eventLoop = eventLoop
         self.logger = logger
         self.awsClient = awsClient
@@ -25,6 +26,7 @@ public struct ElasticsearchClient {
         self.port = port
         self.username = username
         self.password = password
+        self.region = region
     }
 
     func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload = .empty) -> EventLoopFuture<D> {
@@ -58,7 +60,7 @@ public struct ElasticsearchClient {
     }
 
     private func elasticSearchExecute(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
-        let es = ElasticsearchService(client: awsClient, region: .useast1)
+        let es = ElasticsearchService(client: awsClient, region: self.region)
         return es.signHeaders(
             url: URL(string: url)!,
             httpMethod: method,
@@ -82,7 +84,7 @@ public struct ElasticsearchClient {
 
 //// MARK: - Helper
 extension ElasticsearchClient {
-    func baseURL(path: String, queryItems: [URLQueryItem] = []) throws -> String {
+    func buildURL(path: String, queryItems: [URLQueryItem] = []) throws -> String {
         var urlComponents = URLComponents()
         urlComponents.scheme = scheme
         urlComponents.host = host

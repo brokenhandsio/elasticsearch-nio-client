@@ -1,12 +1,11 @@
 import Foundation
 import NIO
 import SotoElasticsearchService
-//import AsyncHTTPClient
 
 extension ElasticsearchClient {
     public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
         do {
-            let url = try baseURL(path: "/\(indexName)/_doc")
+            let url = try buildURL(path: "/\(indexName)/_doc")
             let body = try AWSPayload.data(JSONEncoder().encode(document))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
@@ -18,7 +17,7 @@ extension ElasticsearchClient {
 
     public func updateDocument<Document: Encodable>(_ document: Document, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
         do {
-            let url = try baseURL(path: "/\(indexName)/_doc/\(id)")
+            let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
             let body = try AWSPayload.data(JSONEncoder().encode(document))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
@@ -30,7 +29,7 @@ extension ElasticsearchClient {
 
     public func deleteDocument(id: String, from indexName: String) -> EventLoopFuture<ESDeleteDocumentResponse> {
         do {
-            let url = try baseURL(path: "/\(indexName)/_doc/\(id)")
+            let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
             return sendRequest(url: url, method: .DELETE, headers: .init())
         } catch {
             return self.eventLoop.makeFailedFuture(error)
@@ -39,7 +38,7 @@ extension ElasticsearchClient {
 
     public func searchDocuments<Document: Decodable>(from indexName: String, searchTerm: String, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
         do {
-            let url = try baseURL(path: "/\(indexName)/_search", queryItems: [URLQueryItem(name: "q", value: searchTerm)])
+            let url = try buildURL(path: "/\(indexName)/_search", queryItems: [URLQueryItem(name: "q", value: searchTerm)])
             return sendRequest(url: url, method: .GET, headers: .init())
         } catch {
             return self.eventLoop.makeFailedFuture(error)
@@ -52,7 +51,7 @@ extension ElasticsearchClient {
             if let searchTermToUse = searchTerm {
                 queryItems.append(URLQueryItem(name: "q", value: searchTermToUse))
             }
-            let url = try baseURL(path: "/\(indexName)/_count", queryItems: queryItems)
+            let url = try buildURL(path: "/\(indexName)/_count", queryItems: queryItems)
             return sendRequest(url: url, method: .GET, headers: .init())
         } catch {
             return self.eventLoop.makeFailedFuture(error)
@@ -61,7 +60,7 @@ extension ElasticsearchClient {
 
     public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
         do {
-            let url = try baseURL(path: "/\(name)")
+            let url = try buildURL(path: "/\(name)")
             return sendRequest(url: url, method: .DELETE, headers: .init())
         } catch {
             return self.eventLoop.makeFailedFuture(error)
