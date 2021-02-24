@@ -3,6 +3,19 @@ import NIO
 import SotoElasticsearchService
 
 extension ElasticsearchClient {
+    public func bulkCreate<Document: Encodable & Identifiable>(_ items: [DocumentWithIndex<Document>]) -> EventLoopFuture<ESBulkResponse> {
+        do {
+            let url = try buildURL(path: "/_bulk")
+//            let body = try AWSPayload.data(JSONEncoder().encode(document))
+            let body = AWSPayload.empty
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .POST, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
     public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc")

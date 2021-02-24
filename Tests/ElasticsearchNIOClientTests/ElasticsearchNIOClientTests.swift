@@ -123,6 +123,28 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertFalse(notExists)
     }
 
+    func testBulkCreate() throws {
+        var items = [SomeItem]()
+        for index in 1...10 {
+            let name: String
+            if index % 2 == 0 {
+                name = "Some \(index) Apples"
+            } else {
+                name = "Some \(index) Bananas"
+            }
+            let item = SomeItem(id: UUID(), name: name)
+            items.append(item)
+        }
+
+        let itemsWithIndex = items.map { DocumentWithIndex(index: self.indexName, document: $0) }
+        let response = try client.bulkCreate(itemsWithIndex).wait()
+
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let results = try client.searchDocumentsCount(from: indexName, searchTerm: nil).wait()
+        XCTAssertEqual(results.count, 10)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
