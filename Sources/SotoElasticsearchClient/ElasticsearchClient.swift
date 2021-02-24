@@ -59,7 +59,7 @@ public struct ElasticsearchClient {
         }
     }
 
-    private func signAndExecuteRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
+    func signAndExecuteRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
         let es = ElasticsearchService(client: awsClient, region: self.region)
         guard let url = URL(string: urlString) else {
             return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL"))

@@ -94,6 +94,35 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(updatedResults.count, 0)
     }
 
+    func testIndexExists() throws {
+        let item = SomeItem(id: UUID(), name: "Banana")
+        let response = try client.createDocument(item, in: self.indexName).wait()
+        XCTAssertEqual(response.index, self.indexName)
+        XCTAssertEqual(response.result, "created")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        let exists = try client.checkIndexExists(self.indexName).wait()
+        XCTAssertTrue(exists)
+
+        let notExists = try client.checkIndexExists("some-random-index").wait()
+        XCTAssertFalse(notExists)
+    }
+
+    func testDeleteIndex() throws {
+        let item = SomeItem(id: UUID(), name: "Banana")
+        _ = try client.createDocument(item, in: self.indexName).wait()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        let exists = try client.checkIndexExists(self.indexName).wait()
+        XCTAssertTrue(exists)
+
+        let response = try client.deleteIndex(self.indexName).wait()
+        XCTAssertEqual(response.acknowledged, true)
+
+        let notExists = try client.checkIndexExists(self.indexName).wait()
+        XCTAssertFalse(notExists)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {

@@ -78,4 +78,18 @@ extension ElasticsearchClient {
             return self.eventLoop.makeFailedFuture(error)
         }
     }
+
+    public func checkIndexExists(_ name: String) -> EventLoopFuture<Bool> {
+        do {
+            let url = try buildURL(path: "/\(name)")
+            return signAndExecuteRequest(url: url, method: .HEAD, headers: .init(), body: .empty).flatMapThrowing { response in
+                guard response.status == .ok || response.status == .notFound else {
+                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)")
+                }
+                return response.status == .ok
+            }
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
 }
