@@ -4,7 +4,8 @@ import NIO
 import AsyncHTTPClient
 import SotoElasticsearchService
 
-struct SomeItem: Codable {
+struct SomeItem: Codable, Identifiable {
+    let id: UUID
     let name: String
 }
 
@@ -55,6 +56,22 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.count, 5)
     }
 
+    func testCreateDocument() throws {
+        let item = SomeItem(id: UUID(), name: "Banana")
+        let response = try client.createDocument(item, in: self.indexName).wait()
+        XCTAssertNotEqual(item.id.uuidString, response.id)
+        XCTAssertEqual(response.index, self.indexName)
+        XCTAssertEqual(response.result, "created")
+    }
+
+    func testCreateDocumentWithID() throws {
+        let item = SomeItem(id: UUID(), name: "Banana")
+        let response = try client.createDocumentWithID(item, in: self.indexName).wait()
+        XCTAssertEqual(item.id.uuidString, response.id)
+        XCTAssertEqual(response.index, self.indexName)
+        XCTAssertEqual(response.result, "created")
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
@@ -64,7 +81,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
             } else {
                 name = "Some \(index) Bananas"
             }
-            let item = SomeItem(name: name)
+            let item = SomeItem(id: UUID(), name: name)
             _ = try client.createDocument(item, in: self.indexName).wait()
         }
 
