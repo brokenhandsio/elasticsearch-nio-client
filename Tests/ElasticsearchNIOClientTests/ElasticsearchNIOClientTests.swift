@@ -1,5 +1,5 @@
 import XCTest
-import SotoElasticsearchClient
+import ElasticsearchNIOClient
 import NIO
 import AsyncHTTPClient
 import SotoElasticsearchService
