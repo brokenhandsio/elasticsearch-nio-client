@@ -6,6 +6,7 @@ extension ElasticsearchClient {
     public func bulkCreate<Document: Encodable & Identifiable>(_ items: [DocumentWithIndex<Document>]) -> EventLoopFuture<ESBulkResponse> {
         do {
             let url = try buildURL(path: "/_bulk")
+            
 //            let body = try AWSPayload.data(JSONEncoder().encode(document))
             let body = AWSPayload.empty
             var headers = HTTPHeaders()
@@ -19,7 +20,7 @@ extension ElasticsearchClient {
     public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc")
-            let body = try AWSPayload.data(JSONEncoder().encode(document))
+            let body = try AWSPayload.data(self.jsonEncoder.encode(document))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
             return sendRequest(url: url, method: .POST, headers: headers, body: body)
@@ -31,7 +32,7 @@ extension ElasticsearchClient {
     public func createDocumentWithID<Document: Encodable & Identifiable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(document.id)")
-            let body = try AWSPayload.data(JSONEncoder().encode(document))
+            let body = try AWSPayload.data(self.jsonEncoder.encode(document))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
             return sendRequest(url: url, method: .POST, headers: headers, body: body)
@@ -43,7 +44,7 @@ extension ElasticsearchClient {
     public func updateDocument<Document: Encodable>(_ document: Document, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
-            let body = try AWSPayload.data(JSONEncoder().encode(document))
+            let body = try AWSPayload.data(self.jsonEncoder.encode(document))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
             return sendRequest(url: url, method: .PUT, headers: headers, body: body)

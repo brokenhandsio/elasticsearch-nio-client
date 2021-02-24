@@ -15,8 +15,10 @@ public struct ElasticsearchClient {
     let username: String?
     let password: String?
     let region: Region?
+    let jsonEncoder: JSONEncoder
+    let jsonDecoder: JSONDecoder
 
-    public init(eventLoop: EventLoop, logger: Logger, awsClient: AWSClient, httpClient: HTTPClient, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, region: Region? = nil) {
+    public init(eventLoop: EventLoop, logger: Logger, awsClient: AWSClient, httpClient: HTTPClient, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, region: Region? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
         self.eventLoop = eventLoop
         self.logger = logger
         self.awsClient = awsClient
@@ -27,6 +29,8 @@ public struct ElasticsearchClient {
         self.username = username
         self.password = password
         self.region = region
+        self.jsonEncoder = jsonEncoder
+        self.jsonDecoder = jsonDecoder
     }
 
     func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload = .empty) -> EventLoopFuture<D> {
@@ -41,7 +45,7 @@ public struct ElasticsearchClient {
                     self.logger.debug("No body from ElasticSearch response")
                     throw ElasticSearchClientError(message: "No body from ElasticSearch response")
                 }
-                guard let response = try body.readJSONDecodable(D.self, length: body.readableBytes) else {
+                guard let response = try body.readJSONDecodable(D.self, decoder: jsonDecoder, length: body.readableBytes) else {
                     self.logger.debug("Failed to convert \(D.self)")
                     throw ElasticSearchClientError(message: "Failed to convert \(D.self)")
                 }
