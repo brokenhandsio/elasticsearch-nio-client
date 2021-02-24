@@ -30,7 +30,7 @@ public struct ElasticsearchClient {
     }
 
     func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload = .empty) -> EventLoopFuture<D> {
-        elasticSearchExecute(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
+        signAndExecuteRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
             self.logger.trace("Response: \(clientResponse)")
             if let responseBody = clientResponse.body {
                 self.logger.trace("Response body: \(String(decoding: responseBody.readableBytesView, as: UTF8.self))")
@@ -59,20 +59,19 @@ public struct ElasticsearchClient {
         }
     }
 
-    private func elasticSearchExecute(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
+    private func signAndExecuteRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
         let es = ElasticsearchService(client: awsClient, region: self.region)
-        return es.signHeaders(
-            url: URL(string: url)!,
-            httpMethod: method,
-            headers: headers,
-            body: body
-        ).flatMap { headers in
-            let request = try! HTTPClient.Request(
-                url: url,
-                method: method,
-                headers: headers,
-                body: body.asByteBuffer().map { .byteBuffer($0) }
-            )
+        guard let url = URL(string: urlString) else {
+            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL"))
+        }
+        return es.signHeaders(url: url, httpMethod: method, headers: headers, body: body).flatMap { headers in
+            let request: HTTPClient.Request
+            do {
+                request = try HTTPClient.Request(url: url, method: method, headers: headers, body: body.asByteBuffer().map { .byteBuffer($0) }
+                )
+            } catch {
+                return self.eventLoop.makeFailedFuture(error)
+            }
             self.logger.trace("Request: \(request)")
             if let requestBody = body.asString() {
                 self.logger.trace("Request body: \(requestBody)")
