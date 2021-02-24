@@ -3,14 +3,17 @@ import Foundation
 public struct ESBulkResponse: Codable {
     public let took: Int
     public let errors: Bool
-    public let items: [ESBulkResponseCreateItem]
+    public let items: [ESBulkResponseItem]
 }
 
-public struct ESBulkResponseCreateItem: Codable {
-    public let create: ESBulkResponseCreateItemAction
+public struct ESBulkResponseItem: Codable {
+    public let create: ESBulkResponseItemAction?
+    public let delete: ESBulkResponseItemAction?
+    public let index: ESBulkResponseItemAction?
+    public let update: ESBulkResponseItemAction?
 }
 
-public struct ESBulkResponseCreateItemAction: Codable {
+public struct ESBulkResponseItemAction: Codable {
     public let index: String
     public let type: String
     public let id: String
