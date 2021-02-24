@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    services:
+      elasticsearch:
+        image: "docker.elastic.co/elasticsearch/elasticsearch:7.6.2"
+        ports:
+          - 9201:9200
+        env:
+          discovery.type: single-node
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test
+      run: swift test --enable-test-discovery --sanitize=thread
+
