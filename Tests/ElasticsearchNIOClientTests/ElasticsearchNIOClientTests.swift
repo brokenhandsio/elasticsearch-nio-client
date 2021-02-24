@@ -136,8 +136,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
             items.append(item)
         }
 
-        let itemsWithIndex = items.map { DocumentWithIndex(index: self.indexName, document: $0) }
-        let response = try client.bulkCreate(itemsWithIndex).wait()
+        let itemsWithIndex = items.map { ESBulkOperation(operationType: .create, index: self.indexName, id: $0.id.uuidString, document: $0) }
+        let response = try client.bulk(itemsWithIndex).wait()
         XCTAssertEqual(response.errors, false)
         XCTAssertEqual(response.items.count, 10)
         XCTAssertEqual(response.items.first?.create.result, "created")
