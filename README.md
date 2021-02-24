@@ -37,6 +37,7 @@ Currently the library supports:
 * Document delete
 * Document search
 * Document count
+* Bulk document create
 * Index delete
 * Index exists
 

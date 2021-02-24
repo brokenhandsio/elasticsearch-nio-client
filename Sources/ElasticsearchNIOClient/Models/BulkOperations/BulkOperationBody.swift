@@ -1,10 +1,6 @@
 import Foundation
 
-struct BulkCreate: Codable {
-    let create: BulkCreateBody
-}
-
-struct BulkCreateBody: Codable {
+struct BulkOperationBody: Codable {
     let index: String
     let id: String
 
