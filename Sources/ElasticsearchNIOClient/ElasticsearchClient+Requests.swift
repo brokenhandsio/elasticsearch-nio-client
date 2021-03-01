@@ -54,7 +54,7 @@ extension ElasticsearchClient {
             }
             let body = AWSPayload.string(bodyString)
             var headers = HTTPHeaders()
-            headers.add(name: "content-type", value: "application/json")
+            headers.add(name: "content-type", value: "application/x-ndjson")
             return sendRequest(url: url, method: .POST, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
