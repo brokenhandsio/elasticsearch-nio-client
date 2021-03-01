@@ -4,6 +4,9 @@ import SotoElasticsearchService
 
 extension ElasticsearchClient {
     public func bulk<Document: Encodable>(_ operations: [ESBulkOperation<Document>]) -> EventLoopFuture<ESBulkResponse> {
+        guard operations.count > 0 else {
+            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No operations to perform for the bulk API"))
+        }
         do {
             let url = try buildURL(path: "/_bulk")
             var bodyString = ""
