@@ -131,6 +131,15 @@ extension ElasticsearchClient {
         }
     }
 
+    public func searchDocumentsPaginated<Document: Decodable>(from indexName: String, searchTerm: String, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_search", queryItems: [URLQueryItem(name: "q", value: searchTerm)])
+            return sendRequest(url: url, method: .GET, headers: .init())
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
     public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
         do {
             let url = try buildURL(path: "/\(name)")

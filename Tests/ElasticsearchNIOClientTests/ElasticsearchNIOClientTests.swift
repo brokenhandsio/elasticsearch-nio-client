@@ -167,6 +167,38 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertNotNil(response.items[3].delete)
     }
 
+    func testSearchingItemsPaginated() throws {
+        try setupItems()
+
+        for index in 11...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples").wait()
+        XCTAssertEqual(results.hits.hits.count, 5)
+    }
+
+    func testSearchingItemsWithTypeProvidedPaginated() throws {
+        try setupItems()
+
+        for index in 11...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let results = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
+        XCTAssertEqual(results.hits.hits.count, 5)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
