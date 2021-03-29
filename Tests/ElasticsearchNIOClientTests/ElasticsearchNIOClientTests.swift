@@ -180,7 +180,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", size: 20, offset: 10).wait()
         XCTAssertEqual(results.hits.hits.count, 20)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
-        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 39 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
 
     func testSearchingItemsWithTypeProvidedPaginated() throws {
@@ -196,7 +196,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let results = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", size: 20, offset: 10, type: SomeItem.self).wait()
         XCTAssertEqual(results.hits.hits.count, 20)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
-        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 39 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
 
     // MARK: - Private

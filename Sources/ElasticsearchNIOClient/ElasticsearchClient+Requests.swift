@@ -133,8 +133,12 @@ extension ElasticsearchClient {
 
     public func searchDocumentsPaginated<Document: Decodable>(from indexName: String, searchTerm: String, size: Int = 10, offset: Int = 0, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
         do {
-            let url = try buildURL(path: "/\(indexName)/_search", queryItems: [URLQueryItem(name: "q", value: searchTerm)])
-            return sendRequest(url: url, method: .GET, headers: .init())
+            let url = try buildURL(path: "/\(indexName)/_search")
+            let query = ESSearchRequest(searchQuery: searchTerm, size: size, from: offset)
+            let body = try AWSPayload.data(self.jsonEncoder.encode(query))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }
