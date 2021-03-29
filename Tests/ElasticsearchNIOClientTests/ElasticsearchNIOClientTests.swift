@@ -168,9 +168,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
     }
 
     func testSearchingItemsPaginated() throws {
-        try setupItems()
-
-        for index in 11...100 {
+        for index in 1...100 {
             let name = "Some \(index) Apples"
             let item = SomeItem(id: UUID(), name: name)
             _ = try client.createDocument(item, in: self.indexName).wait()
@@ -179,14 +177,14 @@ class ElasticSearchIntegrationTests: XCTestCase {
         // This is required for ES to settle and load the indexes to return the right results
         Thread.sleep(forTimeInterval: 1.0)
 
-        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples").wait()
-        XCTAssertEqual(results.hits.hits.count, 5)
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", size: 20, offset: 10).wait()
+        XCTAssertEqual(results.hits.hits.count, 20)
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 39 Apples" }))
     }
 
     func testSearchingItemsWithTypeProvidedPaginated() throws {
-        try setupItems()
-
-        for index in 11...100 {
+        for index in 1...100 {
             let name = "Some \(index) Apples"
             let item = SomeItem(id: UUID(), name: name)
             _ = try client.createDocument(item, in: self.indexName).wait()
@@ -195,8 +193,10 @@ class ElasticSearchIntegrationTests: XCTestCase {
         // This is required for ES to settle and load the indexes to return the right results
         Thread.sleep(forTimeInterval: 1.0)
 
-        let results = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
-        XCTAssertEqual(results.hits.hits.count, 5)
+        let results = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", size: 20, offset: 10, type: SomeItem.self).wait()
+        XCTAssertEqual(results.hits.hits.count, 20)
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 39 Apples" }))
     }
 
     // MARK: - Private
