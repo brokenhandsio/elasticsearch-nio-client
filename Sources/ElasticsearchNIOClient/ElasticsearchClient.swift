@@ -43,11 +43,11 @@ public struct ElasticsearchClient {
             case 200...299:
                 guard var body = clientResponse.body else {
                     self.logger.debug("No body from ElasticSearch response")
-                    throw ElasticSearchClientError(message: "No body from ElasticSearch response")
+                    throw ElasticSearchClientError(message: "No body from ElasticSearch response", status: clientResponse.status.code)
                 }
                 guard let response = try body.readJSONDecodable(D.self, decoder: jsonDecoder, length: body.readableBytes) else {
                     self.logger.debug("Failed to convert \(D.self)")
-                    throw ElasticSearchClientError(message: "Failed to convert \(D.self)")
+                    throw ElasticSearchClientError(message: "Failed to convert \(D.self)", status: clientResponse.status.code)
                 }
                 return response
             default:
@@ -58,7 +58,7 @@ public struct ElasticsearchClient {
                     responseBody = "Empty"
                 }
                 self.logger.trace("Got response status \(clientResponse.status) from ElasticSearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(body.asString() ?? "Empty") and response body was \(responseBody)")
-                throw ElasticSearchClientError(message: "Bad status code from ElasticSearch")
+                throw ElasticSearchClientError(message: "Bad status code from ElasticSearch", status: clientResponse.status.code)
             }
         }
     }
@@ -66,7 +66,7 @@ public struct ElasticsearchClient {
     func signAndExecuteRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
         let es = ElasticsearchService(client: awsClient, region: self.region)
         guard let url = URL(string: urlString) else {
-            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL"))
+            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL", status: nil))
         }
         return es.signHeaders(url: url, httpMethod: method, headers: headers, body: body).flatMap { headers in
             let request: HTTPClient.Request
@@ -98,7 +98,7 @@ extension ElasticsearchClient {
         urlComponents.queryItems = queryItems
         guard let url = urlComponents.url else {
             self.logger.debug("malformed url: \(urlComponents)")
-            throw ElasticSearchClientError(message: "malformed url: \(urlComponents)")
+            throw ElasticSearchClientError(message: "malformed url: \(urlComponents)", status: nil)
         }
         return url.absoluteString
     }

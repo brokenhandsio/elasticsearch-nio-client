@@ -5,7 +5,7 @@ import SotoElasticsearchService
 extension ElasticsearchClient {
     public func bulk<Document: Encodable>(_ operations: [ESBulkOperation<Document>]) -> EventLoopFuture<ESBulkResponse> {
         guard operations.count > 0 else {
-            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No operations to perform for the bulk API"))
+            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No operations to perform for the bulk API", status: nil))
         }
         do {
             let url = try buildURL(path: "/_bulk")
@@ -15,42 +15,42 @@ extension ElasticsearchClient {
                 switch operation.operationType {
                 case .create:
                     guard let document = operation.document else {
-                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation"))
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation", status: nil))
                     }
                     let createInfo = BulkCreate(create: bulkOperationBody)
                     let createLine = try self.jsonEncoder.encode(createInfo)
                     let dataLine = try self.jsonEncoder.encode(document)
                     guard let createLineString = String(data: createLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
-                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String")
+                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
                     }
                     bodyString.append("\(createLineString)\n\(dataLineString)\n")
                 case .delete:
                     let deleteInfo = BulkDelete(delete: bulkOperationBody)
                     let deleteLine = try self.jsonEncoder.encode(deleteInfo)
                     guard let deleteLineString = String(data: deleteLine, encoding: .utf8) else {
-                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String")
+                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
                     }
                     bodyString.append("\(deleteLineString)\n")
                 case .index:
                     guard let document = operation.document else {
-                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation"))
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation", status: nil))
                     }
                     let indexInfo = BulkIndex(index: bulkOperationBody)
                     let indexLine = try self.jsonEncoder.encode(indexInfo)
                     let dataLine = try self.jsonEncoder.encode(document)
                     guard let indexLineString = String(data: indexLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
-                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String")
+                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
                     }
                     bodyString.append("\(indexLineString)\n\(dataLineString)\n")
                 case .update:
                     guard let document = operation.document else {
-                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation"))
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation", status: nil))
                     }
                     let updateInfo = BulkUpdate(update: bulkOperationBody)
                     let updateLine = try self.jsonEncoder.encode(updateInfo)
                     let dataLine = try self.jsonEncoder.encode(BulkUpdateDocument(doc: document))
                     guard let updateLineString = String(data: updateLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
-                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String")
+                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
                     }
                     bodyString.append("\(updateLineString)\n\(dataLineString)\n")
                 }
@@ -158,7 +158,7 @@ extension ElasticsearchClient {
             let url = try buildURL(path: "/\(name)")
             return signAndExecuteRequest(url: url, method: .HEAD, headers: .init(), body: .empty).flatMapThrowing { response in
                 guard response.status == .ok || response.status == .notFound else {
-                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)")
+                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)", status: response.status.code)
                 }
                 return response.status == .ok
             }
