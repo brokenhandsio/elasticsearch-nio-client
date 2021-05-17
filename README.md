@@ -1,6 +1,6 @@
 # Elasticsearch NIO Client
 
-An Elasticsearch client for Swift based on [SwiftNIO](https://github.com/apple/swift-nio) and [AsyncHTTPClient](https://github.com/swift-server/async-http-client). The library also has a dependency on [Soto](https://github.com/soto-project/soto) to sign Elasticsearch requests for AWS. This library works with other Elasticsearch endpoints, including local ones as well as AWS, but it does pull it in as a dependency. If you're interested in not requiring Soto and don't want to pull it in, [open an issue](https://github.com/brokenhandsio/elasticsearch-nio-client/issues/new) and I can look at splitting it out.
+An Elasticsearch client for Swift based on [SwiftNIO](https://github.com/apple/swift-nio) and [AsyncHTTPClient](https://github.com/swift-server/async-http-client). If you're interested in using this with AWS you may want to check out [Soto Elasticsearch NIO Client](https://github.com/brokenhandsio/soto-elasticsearch-nio-client).
 
 ## Installation and Usage
 
@@ -25,7 +25,7 @@ Then add the dependency to the target you require it in:
 Creating an instance of `ElasticsearchClient` depends on your environment, but you should be able to work it out depending on what you need. For Vapor, for example, you'd do something like:
 
 ```swift
-let elasticsearchClient = ElasticsearchClient(eventLoop: req.eventLoop, logger: req.logger, awsClient: req.application.aws.client, httpClient: req.application.http.client.shared, host: host)
+let elasticsearchClient = ElasticsearchClient(httpClient: req.application.http.client.shared, eventLoop: req.eventLoop, logger: req.logger, host: host)
 ```
 
 ## Supported Features
