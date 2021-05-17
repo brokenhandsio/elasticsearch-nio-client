@@ -42,7 +42,7 @@ extension ElasticsearchClient {
                     bodyString.append("\(deleteLineString)\n")
                 case .index:
                     guard let document = operation.document else {
-                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation", status: nil))
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for index bulk operation", status: nil))
                     }
                     let indexInfo = BulkIndex(index: bulkOperationBody)
                     let indexLine = try self.jsonEncoder.encode(indexInfo)
@@ -53,11 +53,22 @@ extension ElasticsearchClient {
                     bodyString.append("\(indexLineString)\n\(dataLineString)\n")
                 case .update:
                     guard let document = operation.document else {
-                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for create bulk operation", status: nil))
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No document provided for update bulk operation", status: nil))
                     }
                     let updateInfo = BulkUpdate(update: bulkOperationBody)
                     let updateLine = try self.jsonEncoder.encode(updateInfo)
                     let dataLine = try self.jsonEncoder.encode(BulkUpdateDocument(doc: document))
+                    guard let updateLineString = String(data: updateLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
+                        throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
+                    }
+                    bodyString.append("\(updateLineString)\n\(dataLineString)\n")
+                case .updateScript:
+                    guard let document = operation.document else {
+                        return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No script provided for update script bulk operation", status: nil))
+                    }
+                    let updateInfo = BulkUpdateScript(update: bulkOperationBody)
+                    let updateLine = try self.jsonEncoder.encode(updateInfo)
+                    let dataLine = try self.jsonEncoder.encode(BulkUpdateScriptDocument(script: document))
                     guard let updateLineString = String(data: updateLine, encoding: .utf8), let dataLineString = String(data: dataLine, encoding: .utf8) else {
                         throw ElasticSearchClientError(message: "Failed to convert bulk data from Data to String", status: nil)
                     }
@@ -104,6 +115,18 @@ extension ElasticsearchClient {
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
             return sendRequest(url: url, method: .PUT, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func updateDocumentWithScript<Script: Encodable>(_ script: Script, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_update/\(id)")
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(script))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .POST, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }

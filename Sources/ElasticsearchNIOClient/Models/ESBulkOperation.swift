@@ -19,4 +19,5 @@ public enum BulkOperationType {
     case delete
     case index
     case update
+    case updateScript
 }

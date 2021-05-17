@@ -15,7 +15,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
     // MARK: - Overrides
     override func setUpWithError() throws {
         eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
+        var logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
+        logger.logLevel = .trace
         httpClient = HTTPClient(eventLoopGroupProvider: .shared(eventLoopGroup))
         client = ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200)
         _ = try client.deleteIndex("_all").wait()
@@ -215,7 +216,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
             } else {
                 name = "Some \(index) Bananas"
             }
-            let item = SomeItem(id: UUID(), name: name)
+            let item = SomeItem(id: UUID(), name: name, count: 0)
             _ = try client.createDocumentWithID(item, in: self.indexName).wait()
             items.append(item)
         }
@@ -231,11 +232,11 @@ class ElasticSearchIntegrationTests: XCTestCase {
             let inline: String
         }
 
-        let scriptBody = ScriptBody(inline: #""inline": "ctx._source.count = ctx._source.count ? ctx._source.count += 1 : 1""#)
+        let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
         let request = ScriptRequest(script: scriptBody)
 
         let bulkOperation = [
-            ESBulkOperation(operationType: .update, index: self.indexName, id: items[0].id.uuidString, document: request),
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: request),
         ]
 
         let response = try client.bulk(bulkOperation).wait()
@@ -243,7 +244,33 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertNotNil(response.items.first?.update)
         XCTAssertFalse(response.errors)
 
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
+    }
 
+    func testUpdateWithScript() throws {
+        let item = SomeItem(id: UUID(), name: "Some Item", count: 0)
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptRequest: Codable {
+            let script: ScriptBody
+        }
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
+        let request = ScriptRequest(script: scriptBody)
+
+        let response = try client.updateDocumentWithScript(request, id: item.id.uuidString, in: self.indexName).wait()
+        XCTAssertEqual(response.result, "updated")
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
     }
 
     // MARK: - Private
