@@ -196,6 +196,138 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
 
+    func testGetItem() throws {
+        let item = SomeItem(id: UUID(), name: "Some item")
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.name, item.name)
+    }
+
+    func testBulkUpdateWithScript() throws {
+        var items = [SomeItem]()
+        for index in 1...10 {
+            let name: String
+            if index % 2 == 0 {
+                name = "Some \(index) Apples"
+            } else {
+                name = "Some \(index) Bananas"
+            }
+            let item = SomeItem(id: UUID(), name: name, count: 0)
+            _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+            items.append(item)
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
+
+        let bulkOperation = [
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: scriptBody),
+        ]
+
+        let response = try client.bulk(bulkOperation).wait()
+        XCTAssertEqual(response.items.count, 1)
+        XCTAssertNotNil(response.items.first?.update)
+        XCTAssertFalse(response.errors)
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
+    }
+
+    func testUpdateWithScript() throws {
+        let item = SomeItem(id: UUID(), name: "Some Item", count: 0)
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptRequest: Codable {
+            let script: ScriptBody
+        }
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
+        let request = ScriptRequest(script: scriptBody)
+
+        let response = try client.updateDocumentWithScript(request, id: item.id.uuidString, in: self.indexName).wait()
+        XCTAssertEqual(response.result, "updated")
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
+    }
+
+    func testUpdateWithNonExistentFieldScript() throws {
+        let item = SomeItem(id: UUID(), name: "Some Item")
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptRequest: Codable {
+            let script: ScriptBody
+        }
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: "if(ctx._source.containsKey('count')) { ctx._source.count += 1 } else { ctx._source.count = 1 }")
+        let request = ScriptRequest(script: scriptBody)
+
+        let response = try client.updateDocumentWithScript(request, id: item.id.uuidString, in: self.indexName).wait()
+        XCTAssertEqual(response.result, "updated")
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
+    }
+
+    func testBulkUpdateWithNonExistentFieldScript() throws {
+        var items = [SomeItem]()
+        for index in 1...10 {
+            let name: String
+            if index % 2 == 0 {
+                name = "Some \(index) Apples"
+            } else {
+                name = "Some \(index) Bananas"
+            }
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+            items.append(item)
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: "if(ctx._source.containsKey('count')) { ctx._source.count += 1 } else { ctx._source.count = 1 }")
+
+        let bulkOperation = [
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: scriptBody),
+        ]
+
+        let response = try client.bulk(bulkOperation).wait()
+        XCTAssertEqual(response.items.count, 1)
+        XCTAssertNotNil(response.items.first?.update)
+        XCTAssertFalse(response.errors)
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.count, 1)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {

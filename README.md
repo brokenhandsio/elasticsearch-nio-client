@@ -37,9 +37,11 @@ Currently the library supports:
 * Document delete
 * Document search
 * Document count
+* Document retrieve
 * Bulk create/update/delete/index
 * Index delete
 * Index exists
+* Scripting
 
 If you'd like to add extra functionality, either [open an issue](https://github.com/brokenhandsio/elasticsearch-nio-client/issues/new) and raise a PR. Any contributions are gratefully accepted!
 
