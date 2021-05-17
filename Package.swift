@@ -13,11 +13,9 @@ let package = Package(
         .library(
             name: "ElasticsearchNIOClient",
             targets: ["ElasticsearchNIOClient"]),
-        .library(name: "SotoElasticsearchNIOClient", targets: ["SotoElasticsearchNIOClient"])
     ],
     dependencies: [
         .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.0.0"),
-        .package(url: "https://github.com/soto-project/soto.git", from: "5.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -27,11 +25,6 @@ let package = Package(
             dependencies: [
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
             ]),
-        .target(
-            name: "SotoElasticsearchNIOClient", dependencies: [
-                "ElasticsearchNIOClient",
-                .product(name: "SotoElasticsearchService", package: "soto"),
-        ]),
         .testTarget(
             name: "ElasticsearchNIOClientTests",
             dependencies: ["ElasticsearchNIOClient"]),
