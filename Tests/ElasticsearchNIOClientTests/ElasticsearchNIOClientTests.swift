@@ -224,19 +224,14 @@ class ElasticSearchIntegrationTests: XCTestCase {
         // This is required for ES to settle and load the indexes to return the right results
         Thread.sleep(forTimeInterval: 1.0)
 
-        struct ScriptRequest: Codable {
-            let script: ScriptBody
-        }
-
         struct ScriptBody: Codable {
             let inline: String
         }
 
         let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
-        let request = ScriptRequest(script: scriptBody)
 
         let bulkOperation = [
-            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: request),
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: scriptBody),
         ]
 
         let response = try client.bulk(bulkOperation).wait()
