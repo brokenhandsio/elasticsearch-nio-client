@@ -3,6 +3,15 @@ import NIO
 import NIOHTTP1
 
 extension ElasticsearchClient {
+    public func get<Document: Decodable>(id: String, from indexName: String) -> EventLoopFuture<ESGetSingleDocumentResponse<Document>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
+            return sendRequest(url: url, method: .GET, headers: .init(), body: nil)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
     public func bulk<Document: Encodable>(_ operations: [ESBulkOperation<Document>]) -> EventLoopFuture<ESBulkResponse> {
         guard operations.count > 0 else {
             return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No operations to perform for the bulk API", status: nil))

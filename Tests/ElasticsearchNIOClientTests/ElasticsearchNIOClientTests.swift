@@ -196,6 +196,56 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
 
+    func testGetItem() throws {
+        let item = SomeItem(id: UUID(), name: "Some item")
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        XCTAssertEqual(retrievedItem.source.name, item.name)
+    }
+
+    func testBulkUpdateWithScript() throws {
+        var items = [SomeItem]()
+        for index in 1...10 {
+            let name: String
+            if index % 2 == 0 {
+                name = "Some \(index) Apples"
+            } else {
+                name = "Some \(index) Bananas"
+            }
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+            items.append(item)
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        struct ScriptRequest: Codable {
+            let script: ScriptBody
+        }
+
+        struct ScriptBody: Codable {
+            let inline: String
+        }
+
+        let scriptBody = ScriptBody(inline: #""inline": "ctx._source.count = ctx._source.count ? ctx._source.count += 1 : 1""#)
+        let request = ScriptRequest(script: scriptBody)
+
+        let bulkOperation = [
+            ESBulkOperation(operationType: .update, index: self.indexName, id: items[0].id.uuidString, document: request),
+        ]
+
+        let response = try client.bulk(bulkOperation).wait()
+        XCTAssertEqual(response.items.count, 1)
+        XCTAssertNotNil(response.items.first?.update)
+        XCTAssertFalse(response.errors)
+
+
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
