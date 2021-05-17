@@ -180,7 +180,9 @@ extension ElasticsearchClient {
         do {
             let url = try buildURL(path: "/\(indexName)/_count")
             let body = try ByteBuffer(data: self.jsonEncoder.encode(query))
-            return sendRequest(url: url, method: .GET, headers: .init(), body: body)
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }
