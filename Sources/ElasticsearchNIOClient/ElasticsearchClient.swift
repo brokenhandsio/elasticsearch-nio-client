@@ -1,12 +1,12 @@
 import NIO
-import SotoElasticsearchService
 import AsyncHTTPClient
 import Foundation
+import Logging
+import NIOHTTP1
 
 public struct ElasticsearchClient {
 
-    let client: HTTPClient
-    let awsClient: AWSClient
+    let requester: ElasticsearchRequester
     let eventLoop: EventLoop
     let logger: Logger
     let scheme: String
@@ -14,27 +14,37 @@ public struct ElasticsearchClient {
     let port: Int?
     let username: String?
     let password: String?
-    let region: Region?
     let jsonEncoder: JSONEncoder
     let jsonDecoder: JSONDecoder
 
-    public init(eventLoop: EventLoop, logger: Logger, awsClient: AWSClient, httpClient: HTTPClient, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, region: Region? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
+    public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
         self.eventLoop = eventLoop
         self.logger = logger
-        self.awsClient = awsClient
-        self.client = httpClient
         self.scheme = scheme
         self.host = host
         self.port = port
         self.username = username
         self.password = password
-        self.region = region
+        self.jsonEncoder = jsonEncoder
+        self.jsonDecoder = jsonDecoder
+        self.requester = HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient)
+    }
+
+    public init(requester: ElasticsearchRequester, eventLoop: EventLoop, logger: Logger, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
+        self.requester = requester
+        self.eventLoop = eventLoop
+        self.logger = logger
+        self.scheme = scheme
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
         self.jsonEncoder = jsonEncoder
         self.jsonDecoder = jsonDecoder
     }
 
-    func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload = .empty) -> EventLoopFuture<D> {
-        signAndExecuteRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
+    func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<D> {
+        requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
             self.logger.trace("Response: \(clientResponse)")
             if let responseBody = clientResponse.body {
                 self.logger.trace("Response body: \(String(decoding: responseBody.readableBytesView, as: UTF8.self))")
@@ -51,36 +61,21 @@ public struct ElasticsearchClient {
                 }
                 return response
             default:
+                let requestBody: String
+                if let body = body {
+                    requestBody = String(buffer: body)
+                } else {
+                    requestBody = ""
+                }
                 let responseBody: String
                 if let body = clientResponse.body {
                     responseBody = String(decoding: body.readableBytesView, as: UTF8.self)
                 } else {
                     responseBody = "Empty"
                 }
-                self.logger.trace("Got response status \(clientResponse.status) from ElasticSearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(body.asString() ?? "Empty") and response body was \(responseBody)")
+                self.logger.trace("Got response status \(clientResponse.status) from ElasticSearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(requestBody) and response body was \(responseBody)")
                 throw ElasticSearchClientError(message: "Bad status code from ElasticSearch", status: clientResponse.status.code)
             }
-        }
-    }
-
-    func signAndExecuteRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: AWSPayload) -> EventLoopFuture<HTTPClient.Response> {
-        let es = ElasticsearchService(client: awsClient, region: self.region)
-        guard let url = URL(string: urlString) else {
-            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL", status: nil))
-        }
-        return es.signHeaders(url: url, httpMethod: method, headers: headers, body: body).flatMap { headers in
-            let request: HTTPClient.Request
-            do {
-                request = try HTTPClient.Request(url: url, method: method, headers: headers, body: body.asByteBuffer().map { .byteBuffer($0) }
-                )
-            } catch {
-                return self.eventLoop.makeFailedFuture(error)
-            }
-            self.logger.trace("Request: \(request)")
-            if let requestBody = body.asString() {
-                self.logger.trace("Request body: \(requestBody)")
-            }
-            return self.client.execute(request: request, eventLoop: HTTPClient.EventLoopPreference.delegateAndChannel(on: self.eventLoop), logger: self.logger)
         }
     }
 }
@@ -101,5 +96,39 @@ extension ElasticsearchClient {
             throw ElasticSearchClientError(message: "malformed url: \(urlComponents)", status: nil)
         }
         return url.absoluteString
+    }
+}
+
+public protocol ElasticsearchRequester {
+    func executeRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response>
+}
+
+public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
+    let eventLoop: EventLoop
+    let logger: Logger
+    let client: HTTPClient
+
+    public func executeRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response> {
+        guard let url = URL(string: urlString) else {
+            return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "Failed to convert \(urlString) to a URL", status: nil))
+        }
+        let httpClientBody: HTTPClient.Body?
+        if let body = body {
+            httpClientBody = .byteBuffer(body)
+        } else {
+            httpClientBody = nil
+        }
+        let request: HTTPClient.Request
+        do {
+            request = try HTTPClient.Request(url: url, method: method, headers: headers, body: httpClientBody)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+        self.logger.trace("Request: \(request)")
+        if let requestBody = body {
+            let bodyString = String(buffer: requestBody)
+            self.logger.trace("Request body: \(bodyString)")
+        }
+        return self.client.execute(request: request, eventLoop: HTTPClient.EventLoopPreference.delegateAndChannel(on: self.eventLoop), logger: self.logger)
     }
 }

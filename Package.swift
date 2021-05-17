@@ -13,6 +13,7 @@ let package = Package(
         .library(
             name: "ElasticsearchNIOClient",
             targets: ["ElasticsearchNIOClient"]),
+        .library(name: "SotoElasticsearchNIOClient", targets: ["SotoElasticsearchNIOClient"])
     ],
     dependencies: [
         .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.0.0"),
@@ -25,8 +26,12 @@ let package = Package(
             name: "ElasticsearchNIOClient",
             dependencies: [
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
-                .product(name: "SotoElasticsearchService", package: "soto"),
             ]),
+        .target(
+            name: "SotoElasticsearchNIOClient", dependencies: [
+                "ElasticsearchNIOClient",
+                .product(name: "SotoElasticsearchService", package: "soto"),
+        ]),
         .testTarget(
             name: "ElasticsearchNIOClientTests",
             dependencies: ["ElasticsearchNIOClient"]),
