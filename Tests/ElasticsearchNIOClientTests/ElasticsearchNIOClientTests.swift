@@ -336,10 +336,19 @@ class ElasticSearchIntegrationTests: XCTestCase {
         }
 
         struct QueryBody: Encodable {
-            let term: String
+            let queryString: QueryString
+
+            enum CodingKeys: String, CodingKey {
+                case queryString = "query_string"
+            }
         }
 
-        let queryBody = QueryBody(term: "Apples")
+        struct QueryString: Encodable {
+            let query: String
+        }
+
+        let queryString = QueryString(query: "Apples")
+        let queryBody = QueryBody(queryString: queryString)
         let searchQuery = SearchQuery(query: queryBody)
         let results = try client.searchDocumentsCount(from: indexName, query: searchQuery).wait()
         XCTAssertEqual(results.count, 5)
@@ -355,7 +364,27 @@ class ElasticSearchIntegrationTests: XCTestCase {
         // This is required for ES to settle and load the indexes to return the right results
         Thread.sleep(forTimeInterval: 1.0)
 
-        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, searchTerm: "Apples", size: 20, offset: 10).wait()
+        struct SearchQuery: Encodable {
+            let query: QueryBody
+        }
+
+        struct QueryBody: Encodable {
+            let queryString: QueryString
+
+            enum CodingKeys: String, CodingKey {
+                case queryString = "query_string"
+            }
+        }
+
+        struct QueryString: Encodable {
+            let query: String
+        }
+
+        let queryString = QueryString(query: "Apples")
+        let queryBody = QueryBody(queryString: queryString)
+        let searchQuery = SearchQuery(query: queryBody)
+
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, query: searchQuery, size: 20, offset: 10).wait()
         XCTAssertEqual(results.hits.hits.count, 20)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
