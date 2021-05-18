@@ -201,6 +201,18 @@ extension ElasticsearchClient {
         }
     }
 
+    public func customSearch<Document: Decodable, Query: Encodable>(from indexName: String, query: Query, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_search")
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(query))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
     public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
         do {
             let url = try buildURL(path: "/\(name)")
