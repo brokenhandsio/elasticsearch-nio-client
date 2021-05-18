@@ -364,10 +364,6 @@ class ElasticSearchIntegrationTests: XCTestCase {
         // This is required for ES to settle and load the indexes to return the right results
         Thread.sleep(forTimeInterval: 1.0)
 
-        struct SearchQuery: Encodable {
-            let query: QueryBody
-        }
-
         struct QueryBody: Encodable {
             let queryString: QueryString
 
@@ -382,9 +378,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
 
         let queryString = QueryString(query: "Apples")
         let queryBody = QueryBody(queryString: queryString)
-        let searchQuery = SearchQuery(query: queryBody)
 
-        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, query: searchQuery, size: 20, offset: 10).wait()
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, queryBody: queryBody, size: 20, offset: 10).wait()
         XCTAssertEqual(results.hits.hits.count, 20)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))

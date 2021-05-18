@@ -188,10 +188,10 @@ extension ElasticsearchClient {
         }
     }
 
-    public func searchDocumentsPaginated<Document: Decodable, Query: Encodable>(from indexName: String, query: Query, size: Int = 10, offset: Int = 0, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+    public func searchDocumentsPaginated<Document: Decodable, QueryBody: Encodable>(from indexName: String, queryBody: QueryBody, size: Int = 10, offset: Int = 0, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_search")
-            let queryBody = ESComplexSearchRequest(from: offset, size: size, query: query)
+            let queryBody = ESComplexSearchRequest(from: offset, size: size, query: queryBody)
             let body = try ByteBuffer(data: self.jsonEncoder.encode(queryBody))
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
