@@ -176,6 +176,43 @@ extension ElasticsearchClient {
         }
     }
 
+    public func searchDocumentsCount<Query: Encodable>(from indexName: String, query: Query) -> EventLoopFuture<ESCountResponse> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_count")
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(query))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func searchDocumentsPaginated<Document: Decodable, QueryBody: Encodable>(from indexName: String, queryBody: QueryBody, size: Int = 10, offset: Int = 0, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_search")
+            let queryBody = ESComplexSearchRequest(from: offset, size: size, query: queryBody)
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(queryBody))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func customSearch<Document: Decodable, Query: Encodable>(from indexName: String, query: Query, type: Document.Type = Document.self) -> EventLoopFuture<ESGetMultipleDocumentsResponse<Document>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_search")
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(query))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .GET, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
     public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
         do {
             let url = try buildURL(path: "/\(name)")

@@ -12,6 +12,12 @@ struct ESSearchRequest: Codable {
     }
 }
 
+struct ESComplexSearchRequest<Query: Encodable>: Encodable {
+    let from: Int
+    let size: Int
+    let query: Query
+}
+
 struct ESSearchQueryString: Codable {
     let queryString: ESSearchQuery
 
