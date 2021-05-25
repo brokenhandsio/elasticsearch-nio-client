@@ -3,6 +3,7 @@ import ElasticsearchNIOClient
 import NIO
 import AsyncHTTPClient
 import Logging
+import Baggage
 
 class ElasticSearchIntegrationTests: XCTestCase {
 
@@ -17,7 +18,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
         eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
         httpClient = HTTPClient(eventLoopGroupProvider: .shared(eventLoopGroup))
-        client = ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200)
+        let context = DefaultLoggingContext.topLevel(logger: logger)
+        client = ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), context: context, scheme: "http", host: "localhost", port: 9200)
         _ = try client.deleteIndex("_all").wait()
     }
 

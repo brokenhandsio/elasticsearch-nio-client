@@ -1,12 +1,12 @@
 import Foundation
 import NIO
-import Logging
+import Baggage
 import AsyncHTTPClient
 import NIOHTTP1
 
 public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
     let eventLoop: EventLoop
-    let logger: Logger
+    let context: LoggingContext
     let client: HTTPClient
 
     public func executeRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response> {
@@ -25,11 +25,11 @@ public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }
-        self.logger.trace("Request: \(request)")
+        self.context.logger.trace("Request: \(request)")
         if let requestBody = body {
             let bodyString = String(buffer: requestBody)
-            self.logger.trace("Request body: \(bodyString)")
+            self.context.logger.trace("Request body: \(bodyString)")
         }
-        return self.client.execute(request: request, eventLoop: HTTPClient.EventLoopPreference.delegateAndChannel(on: self.eventLoop), logger: self.logger)
+        return self.client.execute(request: request, eventLoop: HTTPClient.EventLoopPreference.delegateAndChannel(on: self.eventLoop), context: context)
     }
 }
