@@ -1,6 +1,7 @@
 import Foundation
 import NIO
 import NIOHTTP1
+import AsyncHTTPClient
 
 extension ElasticsearchClient {
     public func get<Document: Decodable>(id: String, from indexName: String) -> EventLoopFuture<ESGetSingleDocumentResponse<Document>> {
@@ -231,6 +232,19 @@ extension ElasticsearchClient {
                 }
                 return response.status == .ok
             }
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func customRequest(path: String, method: HTTPMethod, headers: HTTPHeaders = .init(), body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response> {
+        do {
+            var path = path
+            if !path.starts(with: "/") {
+                path = "/\(path)"
+            }
+            let url = try buildURL(path: "\(path)")
+            return requester.executeRequest(url: url, method: method, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }

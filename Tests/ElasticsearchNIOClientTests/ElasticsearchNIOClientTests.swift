@@ -425,6 +425,13 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
 
+    func testCustomRequest() throws {
+        try setupItems()
+
+        let response = try self.client.customRequest(path: self.indexName, method: .HEAD, body: nil).wait()
+        XCTAssertEqual(response.status, .ok)
+    }
+
     // MARK: - Private
     private func setupItems() throws {
         for index in 1...10 {
