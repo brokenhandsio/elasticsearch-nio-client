@@ -17,6 +17,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/slashmo/async-http-client.git", .branch("feature/tracing")),
         .package(url: "https://github.com/apple/swift-distributed-tracing.git", from: "0.1.2"),
+        .package(url: "https://github.com/apple/swift-distributed-tracing-baggage", .upToNextMinor(from: "0.1.1")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -26,6 +27,7 @@ let package = Package(
             dependencies: [
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "Tracing", package: "swift-distributed-tracing"),
+                .product(name: "Baggage", package: "swift-distributed-tracing-baggage"),
             ]),
         .testTarget(
             name: "ElasticsearchNIOClientTests",

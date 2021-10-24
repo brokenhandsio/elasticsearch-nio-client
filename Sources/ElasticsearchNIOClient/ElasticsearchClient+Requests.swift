@@ -237,13 +237,13 @@ extension ElasticsearchClient {
         }
     }
 
-    public func customRequest(path: String, method: HTTPMethod, headers: HTTPHeaders = .init(), body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response> {
+    public func customRequest(path: String, method: HTTPMethod, headers: HTTPHeaders = .init(), body: ByteBuffer?, queryItems: [URLQueryItem] = []) -> EventLoopFuture<HTTPClient.Response> {
         do {
             var path = path
             if !path.starts(with: "/") {
                 path = "/\(path)"
             }
-            let url = try buildURL(path: "\(path)")
+            let url = try buildURL(path: "\(path)", queryItems: queryItems)
             return requester.executeRequest(url: url, method: method, headers: headers, body: body)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
