@@ -47,4 +47,4 @@ If you'd like to add extra functionality, either [open an issue](https://github.
 
 ## Elasticsearch Version
 
-The library has been tested again Elasticsearch 7.6.2, but should work for the most part against older versions.
+The library has been tested again Elasticsearch 8.4, but should work for the most part against older versions.

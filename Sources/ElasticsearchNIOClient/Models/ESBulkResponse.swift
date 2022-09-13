@@ -15,7 +15,6 @@ public struct ESBulkResponseItem: Codable {
 
 public struct ESBulkResponseItemAction: Codable {
     public let index: String
-    public let type: String
     public let id: String
     public let version: Int?
     public let result: String?
@@ -25,7 +24,6 @@ public struct ESBulkResponseItemAction: Codable {
 
     enum CodingKeys: String, CodingKey {
         case index = "_index"
-        case type = "_type"
         case id = "_id"
         case version = "_version"
         case result
