@@ -18,7 +18,9 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
         httpClient = HTTPClient(eventLoopGroupProvider: .shared(eventLoopGroup))
         client = ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200)
-        _ = try client.deleteIndex("_all").wait()
+        if try client.checkIndexExists(indexName).wait() {
+            _ = try client.deleteIndex(indexName).wait()
+        }
     }
 
     override func tearDownWithError() throws {
