@@ -33,6 +33,7 @@ jobs:
           - 9200:9200
         env:
           discovery.type: single-node
+          xpack.security.enabled: false
     steps:
     - uses: actions/checkout@v3
     - name: Test
