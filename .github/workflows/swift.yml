@@ -5,10 +5,11 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Tests
+  test-v7_6:
+    name: Run Tests for Elasticsearch 7.6
     runs-on: ubuntu-latest
     services:
       elasticsearch:
@@ -22,3 +23,18 @@ jobs:
     - name: Test
       run: swift test --enable-test-discovery --sanitize=thread
 
+  test-v8_4:
+    name: Run Tests for Elasticsearch 8.4
+    runs-on: ubuntu-latest
+    services:
+      elasticsearch:
+        image: "docker.elastic.co/elasticsearch/elasticsearch:8.4.1"
+        ports:
+          - 9200:9200
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Test
+      run: swift test --enable-test-discovery --sanitize=thread

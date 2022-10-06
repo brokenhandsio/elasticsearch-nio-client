@@ -6,7 +6,10 @@ import Logging
 import NIOHTTP1
 
 public struct ElasticsearchClient {
-
+    
+    public static let defaultPort = 9200
+    public static let allowedUrlSchemes = ["http", "https"]
+    
     let requester: ElasticsearchRequester
     let eventLoop: EventLoop
     let logger: Logger
@@ -17,25 +20,68 @@ public struct ElasticsearchClient {
     let password: String?
     let jsonEncoder: JSONEncoder
     let jsonDecoder: JSONDecoder
-
-    public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
-        self.eventLoop = eventLoop
-        self.logger = logger
-        self.scheme = scheme
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.jsonEncoder = jsonEncoder
-        self.jsonDecoder = jsonDecoder
-        self.requester = HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient)
+    
+    public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, url string: String, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
+        guard let url = URL(string: string) else { throw ValidationError.invalidURLString }
+        try self.init(
+            httpClient: httpClient,
+            eventLoop: eventLoop,
+            logger: logger,
+            url: url,
+            username: username,
+            password: password,
+            jsonEncoder: jsonEncoder,
+            jsonDecoder: jsonDecoder
+        )
     }
 
-    public init(requester: ElasticsearchRequester, eventLoop: EventLoop, logger: Logger, scheme: String = "http", host: String, port: Int? = 9200, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) {
+    public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, url: URL, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
+        guard
+            let scheme = url.scheme,
+            !scheme.isEmpty
+        else { throw ValidationError.missingURLScheme }
+        guard Self.allowedUrlSchemes.contains(scheme) else { throw ValidationError.invalidURLScheme }
+        guard let host = url.host, !host.isEmpty else { throw ValidationError.missingURLHost }
+        
+        try self.init(
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            eventLoop: eventLoop,
+            logger: logger,
+            scheme: scheme,
+            host: host,
+            port: url.port,
+            username: username,
+            password: password,
+            jsonEncoder: jsonEncoder,
+            jsonDecoder: jsonDecoder
+        )
+    }
+    
+    public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, scheme: String? = nil, host: String, port: Int? = defaultPort, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
+        try self.init(
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            eventLoop: eventLoop,
+            logger: logger,
+            scheme: scheme,
+            host: host,
+            port: port,
+            username: username,
+            password: password,
+            jsonEncoder: jsonEncoder,
+            jsonDecoder: jsonDecoder
+        )
+    }
+
+    public init(requester: ElasticsearchRequester, eventLoop: EventLoop, logger: Logger, scheme: String? = nil, host: String, port: Int? = defaultPort, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
         self.requester = requester
         self.eventLoop = eventLoop
         self.logger = logger
-        self.scheme = scheme
+        if let scheme = scheme {
+            guard Self.allowedUrlSchemes.contains(scheme) else { throw ValidationError.invalidURLScheme }
+            self.scheme = scheme
+        } else {
+            self.scheme = Self.allowedUrlSchemes.first!
+        }
         self.host = host
         self.port = port
         self.username = username

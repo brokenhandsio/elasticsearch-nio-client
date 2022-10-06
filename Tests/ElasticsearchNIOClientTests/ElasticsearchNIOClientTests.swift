@@ -17,8 +17,10 @@ class ElasticSearchIntegrationTests: XCTestCase {
         eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
         httpClient = HTTPClient(eventLoopGroupProvider: .shared(eventLoopGroup))
-        client = ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200)
-        _ = try client.deleteIndex("_all").wait()
+        client = try! ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200)
+        if try client.checkIndexExists(indexName).wait() {
+            _ = try client.deleteIndex(indexName).wait()
+        }
     }
 
     override func tearDownWithError() throws {
@@ -27,6 +29,41 @@ class ElasticSearchIntegrationTests: XCTestCase {
     }
 
     // MARK: - Tests
+    func testURLSetup() throws {
+        let logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
+        
+        let invalidURLString = ""
+        XCTAssertThrowsError(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, url: invalidURLString)) { error in
+            XCTAssertEqual(error as! ElasticsearchClient.ValidationError, .invalidURLString)
+        }
+    
+        let urlWithoutScheme = URL(string: "://localhost:9200")!
+        XCTAssertThrowsError(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, url: urlWithoutScheme)) { error in
+            XCTAssertEqual(error as! ElasticsearchClient.ValidationError, .missingURLScheme)
+        }
+        
+        let urlWithIncorrectScheme = URL(string: "localhost:9200")!
+        XCTAssertThrowsError(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, url: urlWithIncorrectScheme)) { error in
+            XCTAssertEqual(error as! ElasticsearchClient.ValidationError, .invalidURLScheme)
+        }
+        
+        let urlWithoutHost = URL(string: "http://:9200")!
+        XCTAssertThrowsError(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, url: urlWithoutHost)) { error in
+            XCTAssertEqual(error as! ElasticsearchClient.ValidationError, .missingURLHost)
+        }
+        
+        let correctURL = URL(string: "http://localhost:9200")!
+        XCTAssertNoThrow(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, url: correctURL))
+        
+        XCTAssertThrowsError(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "incorrectScheme", host: "localhost", port: 9200)) { error in
+            XCTAssertEqual(error as! ElasticsearchClient.ValidationError, .invalidURLScheme)
+        }
+        
+        XCTAssertNoThrow(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "http", host: "localhost", port: 9200))
+        
+        XCTAssertNoThrow(try ElasticsearchClient(httpClient: httpClient, eventLoop: eventLoopGroup.next(), logger: logger, scheme: "https", host: "localhost", port: 9200))
+    }
+    
     func testSearchingItems() throws {
         try setupItems()
 
