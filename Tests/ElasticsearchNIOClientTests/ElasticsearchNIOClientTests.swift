@@ -96,7 +96,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
     func testCreateDocumentWithID() throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try client.createDocumentWithID(item, in: self.indexName).wait()
-        XCTAssertEqual(item.id.uuidString, response.id)
+        XCTAssertEqual(item.id, response.id)
         XCTAssertEqual(response.index, self.indexName)
         XCTAssertEqual(response.result, "created")
     }
@@ -106,7 +106,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         _ = try client.createDocumentWithID(item, in: self.indexName).wait()
         Thread.sleep(forTimeInterval: 0.5)
         let updatedItem = SomeItem(id: item.id, name: "Bananas")
-        let response = try client.updateDocument(updatedItem, id: item.id.uuidString, in: self.indexName).wait()
+        let response = try client.updateDocument(updatedItem, id: item.id, in: self.indexName).wait()
         XCTAssertEqual(response.result, "updated")
     }
 
@@ -129,7 +129,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.count, 1)
         Thread.sleep(forTimeInterval: 0.5)
 
-        let response = try client.deleteDocument(id: item.id.uuidString, from: self.indexName).wait()
+        let response = try client.deleteDocument(id: item.id, from: self.indexName).wait()
         XCTAssertEqual(response.result, "deleted")
         Thread.sleep(forTimeInterval: 0.5)
 
@@ -179,7 +179,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
             items.append(item)
         }
 
-        let itemsWithIndex = items.map { ESBulkOperation(operationType: .create, index: self.indexName, id: $0.id.uuidString, document: $0) }
+        let itemsWithIndex = items.map { ESBulkOperation(operationType: .create, index: self.indexName, id: $0.id, document: $0) }
         let response = try client.bulk(itemsWithIndex).wait()
         XCTAssertEqual(response.errors, false)
         XCTAssertEqual(response.items.count, 10)
@@ -196,10 +196,10 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let item3 = SomeItem(id: UUID(), name: "Item 3")
         let item4 = SomeItem(id: UUID(), name: "Item 4")
         let bulkOperation = [
-            ESBulkOperation(operationType: .create, index: self.indexName, id: item1.id.uuidString, document: item1),
-            ESBulkOperation(operationType: .index, index: self.indexName, id: item2.id.uuidString, document: item2),
-            ESBulkOperation(operationType: .update, index: self.indexName, id: item3.id.uuidString, document: item3),
-            ESBulkOperation(operationType: .delete, index: self.indexName, id: item4.id.uuidString, document: item4),
+            ESBulkOperation(operationType: .create, index: self.indexName, id: item1.id, document: item1),
+            ESBulkOperation(operationType: .index, index: self.indexName, id: item2.id, document: item2),
+            ESBulkOperation(operationType: .update, index: self.indexName, id: item3.id, document: item3),
+            ESBulkOperation(operationType: .delete, index: self.indexName, id: item4.id, document: item4),
         ]
 
         let response = try client.bulk(bulkOperation).wait()
@@ -248,7 +248,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
 
         Thread.sleep(forTimeInterval: 1.0)
 
-        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id, from: self.indexName).wait()
         XCTAssertEqual(retrievedItem.source.name, item.name)
     }
 
@@ -276,7 +276,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
 
         let bulkOperation = [
-            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: scriptBody),
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id, document: scriptBody),
         ]
 
         let response = try client.bulk(bulkOperation).wait()
@@ -284,7 +284,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertNotNil(response.items.first?.update)
         XCTAssertFalse(response.errors)
 
-        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id.uuidString, from: self.indexName).wait()
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id, from: self.indexName).wait()
         XCTAssertEqual(retrievedItem.source.count, 1)
     }
 
@@ -306,10 +306,10 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let scriptBody = ScriptBody(inline: "ctx._source.count = ctx._source.count += 1")
         let request = ScriptRequest(script: scriptBody)
 
-        let response = try client.updateDocumentWithScript(request, id: item.id.uuidString, in: self.indexName).wait()
+        let response = try client.updateDocumentWithScript(request, id: item.id, in: self.indexName).wait()
         XCTAssertEqual(response.result, "updated")
 
-        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id, from: self.indexName).wait()
         XCTAssertEqual(retrievedItem.source.count, 1)
     }
 
@@ -331,10 +331,10 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let scriptBody = ScriptBody(inline: "if(ctx._source.containsKey('count')) { ctx._source.count += 1 } else { ctx._source.count = 1 }")
         let request = ScriptRequest(script: scriptBody)
 
-        let response = try client.updateDocumentWithScript(request, id: item.id.uuidString, in: self.indexName).wait()
+        let response = try client.updateDocumentWithScript(request, id: item.id, in: self.indexName).wait()
         XCTAssertEqual(response.result, "updated")
 
-        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id.uuidString, from: self.indexName).wait()
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: item.id, from: self.indexName).wait()
         XCTAssertEqual(retrievedItem.source.count, 1)
     }
 
@@ -362,7 +362,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let scriptBody = ScriptBody(inline: "if(ctx._source.containsKey('count')) { ctx._source.count += 1 } else { ctx._source.count = 1 }")
 
         let bulkOperation = [
-            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id.uuidString, document: scriptBody),
+            ESBulkOperation(operationType: .updateScript, index: self.indexName, id: items[0].id, document: scriptBody),
         ]
 
         let response = try client.bulk(bulkOperation).wait()
@@ -370,7 +370,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertNotNil(response.items.first?.update)
         XCTAssertFalse(response.errors)
 
-        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id.uuidString, from: self.indexName).wait()
+        let retrievedItem: ESGetSingleDocumentResponse<SomeItem> = try client.get(id: items[0].id, from: self.indexName).wait()
         XCTAssertEqual(retrievedItem.source.count, 1)
     }
 

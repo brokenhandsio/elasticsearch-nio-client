@@ -1,7 +1,7 @@
 import Foundation
 
-public struct ESCreateDocumentResponse: Codable {
-    public let id: String
+public struct ESCreateDocumentResponse<ID>: Codable where ID: Hashable & Codable {
+    public let id: ID
     public let index: String
     public let version: Int?
     public let result: String
