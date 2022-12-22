@@ -236,4 +236,16 @@ extension ElasticsearchClient {
             return self.eventLoop.makeFailedFuture(error)
         }
     }
+
+    public func custom(_ path: String, method: HTTPMethod, body: Data) -> EventLoopFuture<Data> {
+        do {
+            let url = try buildURL(path: path)
+            let body = ByteBuffer(data: body)
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { return Data(buffer: $0) }
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
 }

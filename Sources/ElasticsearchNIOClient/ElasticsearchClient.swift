@@ -90,7 +90,7 @@ public struct ElasticsearchClient {
         self.jsonDecoder = jsonDecoder
     }
 
-    func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<D> {
+    func sendRequest(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<ByteBuffer> {
         requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
             self.logger.trace("Response: \(clientResponse)")
             if let responseBody = clientResponse.body {
@@ -98,15 +98,11 @@ public struct ElasticsearchClient {
             }
             switch clientResponse.status.code {
             case 200...299:
-                guard var body = clientResponse.body else {
+                guard let body = clientResponse.body else {
                     self.logger.debug("No body from ElasticSearch response")
                     throw ElasticSearchClientError(message: "No body from ElasticSearch response", status: clientResponse.status.code)
                 }
-                guard let response = try body.readJSONDecodable(D.self, decoder: jsonDecoder, length: body.readableBytes) else {
-                    self.logger.debug("Failed to convert \(D.self)")
-                    throw ElasticSearchClientError(message: "Failed to convert \(D.self)", status: clientResponse.status.code)
-                }
-                return response
+                return body
             default:
                 let requestBody: String
                 if let body = body {
@@ -123,6 +119,17 @@ public struct ElasticsearchClient {
                 self.logger.trace("Got response status \(clientResponse.status) from ElasticSearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(requestBody) and response body was \(responseBody)")
                 throw ElasticSearchClientError(message: "Bad status code from ElasticSearch", status: clientResponse.status.code)
             }
+        }
+    }
+
+    func sendRequest<D: Decodable>(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<D> {
+        sendRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { body in
+            var body = body
+            guard let response = try body.readJSONDecodable(D.self, decoder: jsonDecoder, length: body.readableBytes) else {
+                self.logger.debug("Failed to convert \(D.self)")
+                throw ElasticSearchClientError(message: "Failed to convert \(D.self)", status: nil)
+            }
+            return response
         }
     }
 }

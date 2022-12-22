@@ -459,6 +459,48 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
+    
+    func testCustomRequest() throws {
+        for index in 1...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name, count: index)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let query: [String: Any] = [
+            "from": 0,
+            "size": 10,
+            "collapse": [
+                "field": "id.keyword"
+            ],
+            "aggs": [
+                "count-objects": [
+                    "cardinality": [
+                        "field": "id.keyword"
+                    ]
+                ],
+                "count": [
+                    "avg": [
+                      "field": "count"
+                    ]
+                ]
+            ]
+        ]
+        let queryData = try JSONSerialization.data(withJSONObject: query)
+
+        let resultData = try client.custom("/\(indexName)/_search", method: .GET, body: queryData).wait()
+
+        let results = try JSONSerialization.jsonObject(with: resultData) as! [String: Any]
+
+        let aggregations = results["aggregations"] as! [String: Any]
+        let countObjects = aggregations["count-objects"] as! [String: Any]
+        XCTAssertEqual(countObjects["value"] as! Double, 100)
+        let count = aggregations["count"] as! [String: Any]
+        XCTAssertEqual(count["value"] as! Double, 50.5)
+    }
 
     // MARK: - Private
     private func setupItems() throws {
