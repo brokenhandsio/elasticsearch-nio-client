@@ -228,7 +228,7 @@ extension ElasticsearchClient {
             let url = try buildURL(path: "/\(name)")
             return requester.executeRequest(url: url, method: .HEAD, headers: .init(), body: nil).flatMapThrowing { response in
                 guard response.status == .ok || response.status == .notFound else {
-                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)", status: response.status.code)
+                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)", status: response.status)
                 }
                 return response.status == .ok
             }

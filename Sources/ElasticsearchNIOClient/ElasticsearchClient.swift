@@ -100,7 +100,7 @@ public struct ElasticsearchClient {
             case 200...299:
                 guard let body = clientResponse.body else {
                     self.logger.debug("No body from ElasticSearch response")
-                    throw ElasticSearchClientError(message: "No body from ElasticSearch response", status: clientResponse.status.code)
+                    throw ElasticSearchClientError(message: "No body from ElasticSearch response", status: clientResponse.status)
                 }
                 return body
             default:
@@ -117,7 +117,7 @@ public struct ElasticsearchClient {
                     responseBody = "Empty"
                 }
                 self.logger.trace("Got response status \(clientResponse.status) from ElasticSearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(requestBody) and response body was \(responseBody)")
-                throw ElasticSearchClientError(message: "Bad status code from ElasticSearch", status: clientResponse.status.code)
+                throw ElasticSearchClientError(message: "Bad status code from ElasticSearch", status: clientResponse.status)
             }
         }
     }
