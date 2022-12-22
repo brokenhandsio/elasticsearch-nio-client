@@ -101,12 +101,21 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(response.result, "created")
     }
 
-    func testUpdatingDocument() throws {
+    func testUpdateDocumentWithCustomId() throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         _ = try client.createDocumentWithID(item, in: self.indexName).wait()
         Thread.sleep(forTimeInterval: 0.5)
         let updatedItem = SomeItem(id: item.id, name: "Bananas")
         let response = try client.updateDocument(updatedItem, id: item.id.uuidString, in: self.indexName).wait()
+        XCTAssertEqual(response.result, "updated")
+    }
+
+    func testUpdateDocumentWithID() throws {
+        let item = SomeItem(id: UUID(), name: "Banana")
+        _ = try client.createDocumentWithID(item, in: self.indexName).wait()
+        Thread.sleep(forTimeInterval: 0.5)
+        let updatedItem = SomeItem(id: item.id, name: "Bananas")
+        let response = try client.updateDocument(updatedItem, in: self.indexName).wait()
         XCTAssertEqual(response.result, "updated")
     }
 
