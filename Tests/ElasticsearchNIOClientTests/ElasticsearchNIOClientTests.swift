@@ -97,7 +97,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
 
         let results = try client.searchDocuments(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
         XCTAssertEqual(results.hits.total.value, 100)
-        XCTAssertEqual(results.hits.total.relation, "eq")
+        XCTAssertEqual(results.hits.total.relation, .eq)
     }
 
     func testCreateDocument() throws {
