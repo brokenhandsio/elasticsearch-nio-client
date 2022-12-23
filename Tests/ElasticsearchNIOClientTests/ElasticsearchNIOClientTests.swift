@@ -128,6 +128,28 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(updatedResults.count, 0)
     }
 
+    func testCreateIndex() throws {
+        let mappings: [String: Any] = [
+            "properties": [
+                "keyword_field": [
+                    "type": "keyword",
+                    "fields": [
+                        "test": [
+                            "type": "text"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+        let settings: [String: Any] = ["number_of_shards": 3]
+
+        let response = try client.createIndex(indexName, mappings: mappings, settings: settings).wait()
+        XCTAssertEqual(response.acknowledged, true)
+
+        let exists = try client.checkIndexExists(self.indexName).wait()
+        XCTAssertTrue(exists)
+    }
+
     func testIndexExists() throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try client.createDocument(item, in: self.indexName).wait()

@@ -1,5 +1,5 @@
 import Foundation
 
-public struct ESDeleteIndexResponse: Codable {
+public struct ESAcknowledgedResponse: Codable {
     public let acknowledged: Bool?
 }

@@ -214,7 +214,23 @@ extension ElasticsearchClient {
         }
     }
 
-    public func deleteIndex(_ name: String) -> EventLoopFuture<ESDeleteIndexResponse> {
+    public func createIndex(_ indexName: String, mappings: [String: Any], settings: [String: Any]) -> EventLoopFuture<ESAcknowledgedResponse> {
+        do {
+            let url = try buildURL(path: "/\(indexName)")
+            let jsonBase: [String: Any] = [
+                "mappings": mappings,
+                "settings": settings
+            ]
+            let body = try ByteBuffer(data: JSONSerialization.data(withJSONObject: jsonBase))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .PUT, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func deleteIndex(_ name: String) -> EventLoopFuture<ESAcknowledgedResponse> {
         do {
             let url = try buildURL(path: "/\(name)")
             return sendRequest(url: url, method: .DELETE, headers: .init(), body: nil)
