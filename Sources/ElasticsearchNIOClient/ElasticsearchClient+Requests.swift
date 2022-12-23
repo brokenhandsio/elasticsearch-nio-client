@@ -4,7 +4,7 @@ import NIOHTTP1
 import NIOFoundationCompat
 
 extension ElasticsearchClient {
-    public func get<Document: Decodable>(id: String, from indexName: String) -> EventLoopFuture<ESGetSingleDocumentResponse<Document>> {
+    public func get<Document: Decodable, ID: Hashable>(id: ID, from indexName: String) -> EventLoopFuture<ESGetSingleDocumentResponse<Document>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
             return sendRequest(url: url, method: .GET, headers: .init(), body: nil)
@@ -13,7 +13,7 @@ extension ElasticsearchClient {
         }
     }
 
-    public func bulk<Document: Encodable>(_ operations: [ESBulkOperation<Document>]) -> EventLoopFuture<ESBulkResponse> {
+    public func bulk<Document: Encodable, ID: Hashable>(_ operations: [ESBulkOperation<Document, ID>]) -> EventLoopFuture<ESBulkResponse> {
         guard operations.count > 0 else {
             return self.eventLoop.makeFailedFuture(ElasticSearchClientError(message: "No operations to perform for the bulk API", status: nil))
         }
@@ -85,7 +85,7 @@ extension ElasticsearchClient {
         }
     }
 
-    public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
+    public func createDocument<Document: Encodable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse<String>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc")
             let body = try ByteBuffer(data: self.jsonEncoder.encode(document))
@@ -97,7 +97,7 @@ extension ElasticsearchClient {
         }
     }
 
-    public func createDocumentWithID<Document: Encodable & Identifiable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse> {
+    public func createDocumentWithID<Document: Encodable & Identifiable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESCreateDocumentResponse<Document.ID>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(document.id)")
             let body = try ByteBuffer(data: self.jsonEncoder.encode(document))
@@ -109,7 +109,7 @@ extension ElasticsearchClient {
         }
     }
 
-    public func updateDocument<Document: Encodable>(_ document: Document, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
+    public func updateDocument<Document: Encodable, ID: Hashable>(_ document: Document, id: ID, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse<ID>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
             let body = try ByteBuffer(data: self.jsonEncoder.encode(document))
@@ -121,7 +121,19 @@ extension ElasticsearchClient {
         }
     }
 
-    public func updateDocumentWithScript<Script: Encodable>(_ script: Script, id: String, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse> {
+    public func updateDocument<Document: Encodable & Identifiable>(_ document: Document, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse<Document.ID>> {
+        do {
+            let url = try buildURL(path: "/\(indexName)/_doc/\(document.id)")
+            let body = try ByteBuffer(data: self.jsonEncoder.encode(document))
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: .PUT, headers: headers, body: body)
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func updateDocumentWithScript<Script: Encodable, ID: Hashable>(_ script: Script, id: ID, in indexName: String) -> EventLoopFuture<ESUpdateDocumentResponse<ID>> {
         do {
             let url = try buildURL(path: "/\(indexName)/_update/\(id)")
             let body = try ByteBuffer(data: self.jsonEncoder.encode(script))
@@ -133,7 +145,7 @@ extension ElasticsearchClient {
         }
     }
 
-    public func deleteDocument(id: String, from indexName: String) -> EventLoopFuture<ESDeleteDocumentResponse> {
+    public func deleteDocument<ID: Hashable>(id: ID, from indexName: String) -> EventLoopFuture<ESDeleteDocumentResponse> {
         do {
             let url = try buildURL(path: "/\(indexName)/_doc/\(id)")
             return sendRequest(url: url, method: .DELETE, headers: .init(), body: nil)
