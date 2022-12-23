@@ -85,6 +85,21 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(results.count, 5)
     }
 
+    func testSearchDocumentsTotal() throws {
+        for index in 1...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+
+        let results = try client.searchDocuments(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
+        XCTAssertEqual(results.hits.total.value, 100)
+        XCTAssertEqual(results.hits.total.relation, "eq")
+    }
+
     func testCreateDocument() throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try client.createDocument(item, in: self.indexName).wait()
