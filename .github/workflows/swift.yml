@@ -19,7 +19,7 @@ jobs:
         env:
           discovery.type: single-node
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Test
       run: swift test --enable-test-discovery --sanitize=thread
 
@@ -35,6 +35,6 @@ jobs:
           discovery.type: single-node
           xpack.security.enabled: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Test
       run: swift test --enable-test-discovery --sanitize=thread
