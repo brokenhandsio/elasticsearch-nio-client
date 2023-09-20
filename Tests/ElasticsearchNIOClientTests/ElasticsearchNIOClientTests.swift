@@ -505,6 +505,34 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
+    
+    func testCustomSearchWithDataQuery() throws {
+        for index in 1...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 1.0)
+        
+        let query = """
+        {
+            "from": 10,
+            "size": 20,
+            "query": {
+                "query_string": {
+                    "query": "Apples"
+                }
+            }
+        }
+        """.data(using: .utf8)!
+        
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.customSearch(from: indexName, query: query).wait()
+        XCTAssertEqual(results.hits.hits.count, 20)
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
+    }
 
     // MARK: - Private
     private func setupItems() throws {
