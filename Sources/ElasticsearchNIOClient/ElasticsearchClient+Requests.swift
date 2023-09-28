@@ -267,10 +267,22 @@ extension ElasticsearchClient {
             let url = try buildURL(path: "/\(name)")
             return requester.executeRequest(url: url, method: .HEAD, headers: .init(), body: nil).flatMapThrowing { response in
                 guard response.status == .ok || response.status == .notFound else {
-                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)", status: response.status.code)
+                    throw ElasticSearchClientError(message: "Invalid response from index exists API - \(response)", status: response.status)
                 }
                 return response.status == .ok
             }
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
+        }
+    }
+
+    public func custom(_ path: String, method: HTTPMethod, body: Data) -> EventLoopFuture<Data> {
+        do {
+            let url = try buildURL(path: path)
+            let body = ByteBuffer(data: body)
+            var headers = HTTPHeaders()
+            headers.add(name: "content-type", value: "application/json")
+            return sendRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { return Data(buffer: $0) }
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }
