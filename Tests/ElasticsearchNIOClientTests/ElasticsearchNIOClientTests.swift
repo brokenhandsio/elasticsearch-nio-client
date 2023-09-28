@@ -128,7 +128,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
     func testUpdateDocumentWithID() throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         _ = try client.createDocumentWithID(item, in: self.indexName).wait()
-        Thread.sleep(forTimeInterval: 0.5)
+        Thread.sleep(forTimeInterval: 1.0)
         let updatedItem = SomeItem(id: item.id, name: "Bananas")
         let response = try client.updateDocument(updatedItem, in: self.indexName).wait()
         XCTAssertEqual(response.result, "updated")
@@ -476,7 +476,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         }
 
         // This is required for ES to settle and load the indexes to return the right results
-        Thread.sleep(forTimeInterval: 1.0)
+        Thread.sleep(forTimeInterval: 2.0)
 
         struct Query: Encodable {
             let query: QueryBody
