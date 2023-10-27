@@ -91,7 +91,15 @@ public struct ElasticsearchClient {
     }
 
     func sendRequest(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<ByteBuffer> {
-        requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
+        var headers = headers
+        if let username = self.username, let password = self.password {
+            let pair = "\(username):\(password)"
+            if let data = pair.data(using: .utf8) {
+                let basic = data.base64EncodedString()
+                headers.add(name: "Authorization", value: "Basic \(basic)")
+            }
+        }
+        return requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
             self.logger.trace("Response: \(clientResponse)")
             if let responseBody = clientResponse.body {
                 self.logger.trace("Response body: \(String(decoding: responseBody.readableBytesView, as: UTF8.self))")
