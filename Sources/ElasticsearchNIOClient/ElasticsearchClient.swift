@@ -44,7 +44,7 @@ public struct ElasticsearchClient {
         guard let host = url.host, !host.isEmpty else { throw ValidationError.missingURLHost }
         
         try self.init(
-            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, username: username, password: password, client: httpClient),
             eventLoop: eventLoop,
             logger: logger,
             scheme: scheme,
@@ -59,7 +59,7 @@ public struct ElasticsearchClient {
     
     public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, scheme: String? = nil, host: String, port: Int? = defaultPort, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
         try self.init(
-            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, username: username, password: password, client: httpClient),
             eventLoop: eventLoop,
             logger: logger,
             scheme: scheme,
@@ -91,15 +91,7 @@ public struct ElasticsearchClient {
     }
 
     func sendRequest(url: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<ByteBuffer> {
-        var headers = headers
-        if let username = self.username, let password = self.password {
-            let pair = "\(username):\(password)"
-            if let data = pair.data(using: .utf8) {
-                let basic = data.base64EncodedString()
-                headers.add(name: "Authorization", value: "Basic \(basic)")
-            }
-        }
-        return requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
+        requester.executeRequest(url: url, method: method, headers: headers, body: body).flatMapThrowing { clientResponse in
             self.logger.trace("Response: \(clientResponse)")
             if let responseBody = clientResponse.body {
                 self.logger.trace("Response body: \(String(decoding: responseBody.readableBytesView, as: UTF8.self))")

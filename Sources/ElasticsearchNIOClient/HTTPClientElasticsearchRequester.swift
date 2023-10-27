@@ -7,6 +7,8 @@ import NIOHTTP1
 public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
     let eventLoop: EventLoop
     let logger: Logger
+    let username: String?
+    let password: String?
     let client: HTTPClient
 
     public func executeRequest(url urlString: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> EventLoopFuture<HTTPClient.Response> {
@@ -18,6 +20,14 @@ public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
             httpClientBody = .byteBuffer(body)
         } else {
             httpClientBody = nil
+        }
+        var headers = headers
+        if let username = self.username, let password = self.password {
+            let pair = "\(username):\(password)"
+            if let data = pair.data(using: .utf8) {
+                let basic = data.base64EncodedString()
+                headers.add(name: "Authorization", value: "Basic \(basic)")
+            }
         }
         let request: HTTPClient.Request
         do {
