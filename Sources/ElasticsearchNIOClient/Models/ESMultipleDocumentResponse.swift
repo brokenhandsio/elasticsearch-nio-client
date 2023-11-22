@@ -11,7 +11,7 @@ public struct ESGetMultipleDocumentsResponse<Document: Decodable>: Decodable {
             }
         }
 
-        public let total: Total
+        public let total: Total?
         public let hits: [ESGetSingleDocumentResponse<Document>]
     }
 

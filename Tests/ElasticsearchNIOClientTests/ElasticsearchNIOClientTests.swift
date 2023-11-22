@@ -96,8 +96,8 @@ class ElasticSearchIntegrationTests: XCTestCase {
         Thread.sleep(forTimeInterval: 1.0)
         
         let results = try client.searchDocuments(from: indexName, searchTerm: "Apples", type: SomeItem.self).wait()
-        XCTAssertEqual(results.hits.total.value, 100)
-        XCTAssertEqual(results.hits.total.relation, .eq)
+        XCTAssertEqual(results.hits.total!.value, 100)
+        XCTAssertEqual(results.hits.total!.relation, .eq)
     }
     
     func testCreateDocument() throws {
@@ -464,6 +464,7 @@ class ElasticSearchIntegrationTests: XCTestCase {
         
         let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.searchDocumentsPaginated(from: indexName, queryBody: queryBody, size: 20, offset: 10).wait()
         XCTAssertEqual(results.hits.hits.count, 20)
+        XCTAssertEqual(results.hits.total!.value, 100)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
     }
@@ -501,6 +502,54 @@ class ElasticSearchIntegrationTests: XCTestCase {
         let query = Query(query: queryBody, from: 10, size: 20)
         
         let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.customSearch(from: indexName, query: query).wait()
+        XCTAssertEqual(results.hits.hits.count, 20)
+        XCTAssertEqual(results.hits.total!.value, 100)
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
+        XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
+    }
+
+    func testCustomSearchWithTrackTotalHitsFalse() throws {
+        for index in 1...100 {
+            let name = "Some \(index) Apples"
+            let item = SomeItem(id: UUID(), name: name)
+            _ = try client.createDocument(item, in: self.indexName).wait()
+        }
+        
+        // This is required for ES to settle and load the indexes to return the right results
+        Thread.sleep(forTimeInterval: 2.0)
+        
+        struct Query: Encodable {
+            let query: QueryBody
+            let from: Int
+            let size: Int
+            let trackTotalHits: Bool
+
+            enum CodingKeys: String, CodingKey {
+                case query 
+                case from 
+                case size 
+                case trackTotalHits = "track_total_hits" 
+            }
+        }
+        
+        struct QueryBody: Encodable {
+            let queryString: QueryString
+            
+            enum CodingKeys: String, CodingKey {
+                case queryString = "query_string"
+            }
+        }
+        
+        struct QueryString: Encodable {
+            let query: String
+        }
+        
+        let queryString = QueryString(query: "Apples")
+        let queryBody = QueryBody(queryString: queryString)
+        let query = Query(query: queryBody, from: 10, size: 20, trackTotalHits: false)
+        
+        let results: ESGetMultipleDocumentsResponse<SomeItem> = try client.customSearch(from: indexName, query: query).wait()
+        XCTAssertNil(results.hits.total)
         XCTAssertEqual(results.hits.hits.count, 20)
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 11 Apples" }))
         XCTAssertTrue(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }))
