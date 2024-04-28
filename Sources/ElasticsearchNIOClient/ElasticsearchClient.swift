@@ -44,7 +44,7 @@ public struct ElasticsearchClient {
         guard let host = url.host, !host.isEmpty else { throw ValidationError.missingURLHost }
         
         try self.init(
-            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, username: username, password: password, client: httpClient),
             eventLoop: eventLoop,
             logger: logger,
             scheme: scheme,
@@ -59,7 +59,7 @@ public struct ElasticsearchClient {
     
     public init(httpClient: HTTPClient, eventLoop: EventLoop, logger: Logger, scheme: String? = nil, host: String, port: Int? = defaultPort, username: String? = nil, password: String? = nil, jsonEncoder: JSONEncoder = JSONEncoder(), jsonDecoder: JSONDecoder = JSONDecoder()) throws {
         try self.init(
-            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, client: httpClient),
+            requester: HTTPClientElasticsearchRequester(eventLoop: eventLoop, logger: logger, username: username, password: password, client: httpClient),
             eventLoop: eventLoop,
             logger: logger,
             scheme: scheme,
