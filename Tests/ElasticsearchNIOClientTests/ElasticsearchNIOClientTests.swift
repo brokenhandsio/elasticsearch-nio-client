@@ -597,6 +597,36 @@ class ElasticSearchIntegrationTests: XCTestCase {
         XCTAssertEqual(count["value"] as! Double, 50.5)
     }
     
+    func testCustomRequestWithQueryItems() throws {
+        // create index
+        let mappings: [String: Any] = [
+            "properties": [
+                "keyword_field": [
+                    "type": "keyword",
+                    "fields": [
+                        "test": [
+                            "type": "text"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+        let settings: [String: Any] = ["number_of_shards": 3]
+        let createResponse = try client.createIndex(indexName, mappings: mappings, settings: settings).wait()
+        XCTAssertEqual(createResponse.acknowledged, true)
+        
+        // get indices in json format
+        struct ESGetSingleIndexResponse: Decodable {
+            let index: String
+        }
+        let resultData = try client.custom("/_cat/indices", queryItems: [URLQueryItem(name: "format", value: "json")], method: .GET, body: "".data(using: .utf8)!).wait()
+        let results = try JSONDecoder().decode([ESGetSingleIndexResponse].self, from: resultData)
+        XCTAssertNotNil(results.map { $0.index }.first { $0 == indexName })
+        
+        // delete index
+        let deleteResponse = try client.deleteIndex(self.indexName).wait()
+        XCTAssertEqual(deleteResponse.acknowledged, true)
+    }
     
     func testCustomSearchWithDataQuery() throws {
         for index in 1...100 {
