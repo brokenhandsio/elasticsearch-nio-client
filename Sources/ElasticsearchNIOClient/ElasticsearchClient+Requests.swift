@@ -276,9 +276,9 @@ extension ElasticsearchClient {
         }
     }
 
-    public func custom(_ path: String, method: HTTPMethod, body: Data) -> EventLoopFuture<Data> {
+    public func custom(_ path: String, queryItems: [URLQueryItem] = [], method: HTTPMethod, body: Data) -> EventLoopFuture<Data> {
         do {
-            let url = try buildURL(path: path)
+            let url = try buildURL(path: path, queryItems: queryItems)
             let body = ByteBuffer(data: body)
             var headers = HTTPHeaders()
             headers.add(name: "content-type", value: "application/json")
