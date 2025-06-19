@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Foundation
 import HTTPTypes
 import Logging
+import NIOFoundationCompat
 
 public struct ElasticsearchClient {
     public static let defaultPort = 9200
