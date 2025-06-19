@@ -10,19 +10,19 @@ extension ElasticsearchClient {
         var localizedDescription: String { self.kind.localizedDescription }
 
         private let kind: Kind
-        
+
         private init(_ kind: Kind) { self.kind = kind }
-        
-        public static func ==(lhs: ValidationError, rhs: ValidationError) -> Bool {
+
+        public static func == (lhs: ValidationError, rhs: ValidationError) -> Bool {
             return lhs.kind == rhs.kind
         }
-        
+
         private enum Kind: LocalizedError {
             case invalidURLString
             case missingURLScheme
             case invalidURLScheme
             case missingURLHost
-            
+
             var localizedDescription: String {
                 let message: String = {
                     switch self {
