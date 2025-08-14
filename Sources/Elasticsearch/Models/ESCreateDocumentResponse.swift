@@ -5,7 +5,7 @@ public struct ESCreateDocumentResponse<ID>: Codable where ID: Hashable & Codable
     public let index: String
     public let version: Int?
     public let result: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case index = "_index"

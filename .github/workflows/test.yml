@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests on Elasticsearch ${{ matrix.es-version }}
+    strategy:
+      matrix:
+        es-version: ['7.6.2', '8.4.1', '9.1.0']
+    services:
+      elasticsearch:
+        image: "docker.elastic.co/elasticsearch/elasticsearch:${{ matrix.es-version }}"
+        ports:
+          - 9200:9200
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test
+        run: swift test
+    
