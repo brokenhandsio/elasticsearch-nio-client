@@ -34,8 +34,12 @@ extension Pipe {
 }
 
 let (dockerResult, _) = shell(
-    "docker", "run", "--name", containerName, "-p", "\(port):9200", "-e", "discovery.type=single-node", "-e",
-    "ES_JAVA_OPTS=-Xms256m -Xmx256m", "-d", "docker.elastic.co/elasticsearch/elasticsearch:7.6.2")
+    "docker", "run", "--name", containerName, "-p", "\(port):9200",
+    "-e", "discovery.type=single-node",
+    "-e", "ES_JAVA_OPTS=-Xms256m -Xmx256m",
+    "-e", "xpack.security.enabled=false",
+    "-e", "xpack.security.enrollment.enabled=false",
+    "-d", "docker.elastic.co/elasticsearch/elasticsearch:9.1.0")
 
 guard dockerResult == 0 else {
     print("❌ ERROR: Failed to create the Elasticsearch instance")

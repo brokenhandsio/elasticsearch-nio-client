@@ -133,19 +133,25 @@ public struct ElasticsearchClient {
         method: HTTPRequest.Method,
         headers: HTTPFields,
         body: HTTPClientRequest.Body?
-    ) async throws -> HTTPClientResponse.Body {
+    ) async throws -> HTTPClientResponse {
         let clientResponse = try await requester.executeRequest(url: url, method: method, headers: headers, body: body)
         self.logger.trace("Response: \(clientResponse)")
 
         switch clientResponse.status.code {
         case 200...299:
-            return clientResponse.body
+            return clientResponse
         default:
             let requestBody = try await body?.collect(upTo: 1024 * 1024) ?? .init()
             let responseBody = try await clientResponse.body.collect(upTo: 1024 * 1024)
             self.logger.trace(
-                "Got response status \(clientResponse.status) from Elasticsearch with response \(clientResponse) when trying \(method) request to \(url). Request body was \(requestBody) and response body was \(responseBody)"
-            )
+                "Sent request and received response",
+                metadata: [
+                    "responseStatus": "\(clientResponse.status)",
+                    "requestMethod": "\(method)",
+                    "requestURL": "\(url)",
+                    "requestBody": "\(requestBody)",
+                    "responseBody": "\(responseBody)",
+                ])
             throw ElasticsearchClientError(
                 message: "Bad status code from Elasticsearch", status: .init(code: Int(clientResponse.status.code)))
         }
@@ -157,18 +163,18 @@ public struct ElasticsearchClient {
         headers: HTTPFields,
         body: HTTPClientRequest.Body?
     ) async throws -> D {
-        let body = try await sendRequest(url: url, method: method, headers: headers, body: body)
-        let bodyBytes = try await body.collect(upTo: 1024 * 1024)
+        let response = try await sendRequest(url: url, method: method, headers: headers, body: body)
+        let bodyBytes = try await response.body.collect(upTo: 1024 * 1024)
 
-        let response: D
+        let decodedResponse: D
         do {
-            response = try jsonDecoder.decode(D.self, from: bodyBytes)
+            decodedResponse = try jsonDecoder.decode(D.self, from: bodyBytes)
         } catch {
             let string = String(buffer: bodyBytes)
             self.logger.debug("Failed to convert \(D.self). Bytes: \(string)")
             throw ElasticsearchClientError(message: "Failed to convert \(D.self)", status: nil)
         }
-        return response
+        return decodedResponse
     }
 }
 
@@ -184,8 +190,8 @@ extension ElasticsearchClient {
         urlComponents.path = path
         urlComponents.queryItems = queryItems
         guard let url = urlComponents.url else {
-            self.logger.debug("malformed url: \(urlComponents)")
-            throw ElasticsearchClientError(message: "malformed url: \(urlComponents)", status: nil)
+            self.logger.debug("Malformed URL", metadata: ["url": "\(urlComponents)"])
+            throw ElasticsearchClientError(message: "Malformed URL: \(urlComponents)", status: nil)
         }
         return url.absoluteString
     }

@@ -5,14 +5,15 @@ import Logging
 import Testing
 
 @Suite(.serialized)
-struct ElasticsearchIntegrationTests {
-    var client: ElasticsearchClient!
-    var httpClient: HTTPClient!
+struct ElasticsearchTests {
+    let client: ElasticsearchClient
+    let httpClient: HTTPClient
     let indexName = "some-index"
-    var logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
+    var logger: Logger
 
     init() async throws {
         httpClient = .shared
+        logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
         logger.logLevel = .debug
         client = try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: "http", host: "localhost", port: 9200)
         if try await client.checkIndexExists(indexName) {
@@ -20,42 +21,47 @@ struct ElasticsearchIntegrationTests {
         }
     }
 
-    @Test
-    func testURLSetup() async throws {
-        #expect(throws: ElasticsearchClient.ValidationError.invalidURLString) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, url: "")
-        }
-
-        #expect(throws: ElasticsearchClient.ValidationError.missingURLScheme) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, url: "://localhost:9200")
-        }
-
-        #expect(throws: ElasticsearchClient.ValidationError.invalidURLScheme) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, url: "localhost:9200")
-        }
-
-        #expect(throws: ElasticsearchClient.ValidationError.missingURLHost) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, url: "http://:9200")
-        }
-
-        #expect(throws: Never.self) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, url: "http://localhost:9200")
-        }
-
-        #expect(throws: ElasticsearchClient.ValidationError.invalidURLScheme) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: "incorrectScheme", host: "localhost", port: 9200)
-        }
-
-        #expect(throws: Never.self) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: "http", host: "localhost", port: 9200)
-        }
-
-        #expect(throws: Never.self) {
-            try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: "https", host: "localhost", port: 9200)
+    @Test(
+        "URL Setup Validation",
+        arguments: [
+            ("", ElasticsearchClient.ValidationError.invalidURLString),
+            ("://localhost:9200", ElasticsearchClient.ValidationError.missingURLScheme),
+            ("localhost:9200", ElasticsearchClient.ValidationError.invalidURLScheme),
+            ("http://:9200", ElasticsearchClient.ValidationError.missingURLHost),
+            ("http://localhost:9200", nil),
+        ])
+    func testURLSetup(url: String, error: ElasticsearchClient.ValidationError?) async throws {
+        if let error {
+            #expect(throws: error) {
+                try ElasticsearchClient(httpClient: httpClient, logger: logger, url: url)
+            }
+        } else {
+            #expect(throws: Never.self) {
+                try ElasticsearchClient(httpClient: httpClient, logger: logger, url: url)
+            }
         }
     }
 
-    @Test
+    @Test(
+        "URL Scheme Validation",
+        arguments: [
+            ("incorrectScheme", ElasticsearchClient.ValidationError.invalidURLScheme),
+            ("http", nil),
+            ("https", nil),
+        ])
+    func testURLSchemeValidation(scheme: String, error: ElasticsearchClient.ValidationError?) async throws {
+        if let error {
+            #expect(throws: error) {
+                try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: scheme, host: "localhost", port: 9200)
+            }
+        } else {
+            #expect(throws: Never.self) {
+                try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: scheme, host: "localhost", port: 9200)
+            }
+        }
+    }
+
+    @Test("Search Items")
     func testSearchingItems() async throws {
         try await setupItems()
 
@@ -63,7 +69,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.count == 5)
     }
 
-    @Test
+    @Test("Search Items With Type Provided")
     func testSearchingItemsWithTypeProvided() async throws {
         try await setupItems()
 
@@ -71,7 +77,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.count == 5)
     }
 
-    @Test
+    @Test("Search Items Count")
     func testSearchItemsCount() async throws {
         try await setupItems()
 
@@ -79,7 +85,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.count == 5)
     }
 
-    @Test
+    @Test("Search Documents Total")
     func testSearchDocumentsTotal() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -95,7 +101,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.total!.relation == .eq)
     }
 
-    @Test
+    @Test("Create Document")
     func testCreateDocument() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try await client.createDocument(item, in: self.indexName)
@@ -104,7 +110,7 @@ struct ElasticsearchIntegrationTests {
         #expect(response.result == "created")
     }
 
-    @Test
+    @Test("Create Document With ID")
     func testCreateDocumentWithID() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try await client.createDocumentWithID(item, in: self.indexName)
@@ -113,7 +119,7 @@ struct ElasticsearchIntegrationTests {
         #expect(response.result == "created")
     }
 
-    @Test
+    @Test("Update Document With Custom ID")
     func testUpdateDocumentWithCustomId() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         _ = try await client.createDocumentWithID(item, in: self.indexName)
@@ -123,7 +129,7 @@ struct ElasticsearchIntegrationTests {
         #expect(response.result == "updated")
     }
 
-    @Test
+    @Test("Update Document With ID")
     func testUpdateDocumentWithID() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         _ = try await client.createDocumentWithID(item, in: self.indexName)
@@ -133,7 +139,7 @@ struct ElasticsearchIntegrationTests {
         #expect(response.result == "updated")
     }
 
-    @Test
+    @Test("Delete Document")
     func testDeletingDocument() async throws {
         try await setupItems()
         let item = SomeItem(id: UUID(), name: "Banana")
@@ -152,7 +158,7 @@ struct ElasticsearchIntegrationTests {
         #expect(updatedResults.count == 0)
     }
 
-    @Test
+    @Test("Create Index")
     func testCreateIndex() async throws {
         let mappings: [String: Any] = [
             "properties": [
@@ -175,7 +181,7 @@ struct ElasticsearchIntegrationTests {
         #expect(exists == true)
     }
 
-    @Test
+    @Test("Index Exists")
     func testIndexExists() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         let response = try await client.createDocument(item, in: self.indexName)
@@ -190,7 +196,7 @@ struct ElasticsearchIntegrationTests {
         #expect(notExists == false)
     }
 
-    @Test
+    @Test("Delete Index")
     func testDeleteIndex() async throws {
         let item = SomeItem(id: UUID(), name: "Banana")
         _ = try await client.createDocument(item, in: self.indexName)
@@ -206,7 +212,7 @@ struct ElasticsearchIntegrationTests {
         #expect(notExists == false)
     }
 
-    @Test
+    @Test("Bulk Create")
     func testBulkCreate() async throws {
         var items = [SomeItem]()
         for index in 1...10 {
@@ -231,7 +237,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.count == 10)
     }
 
-    @Test
+    @Test("Bulk Create, Update, Delete Index")
     func testBulkCreateUpdateDeleteIndex() async throws {
         let item1 = SomeItem(id: UUID(), name: "Item 1")
         let item2 = SomeItem(id: UUID(), name: "Item 2")
@@ -252,7 +258,7 @@ struct ElasticsearchIntegrationTests {
         #expect(response.items[3].delete != nil)
     }
 
-    @Test
+    @Test("Search Items Paginated")
     func testSearchingItemsPaginated() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -271,7 +277,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }) == true)
     }
 
-    @Test
+    @Test("Search Items With Type Provided Paginated")
     func testSearchingItemsWithTypeProvidedPaginated() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -290,7 +296,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }) == true)
     }
 
-    @Test
+    @Test("Get Item")
     func testGetItem() async throws {
         let item = SomeItem(id: UUID(), name: "Some item")
         _ = try await client.createDocumentWithID(item, in: self.indexName)
@@ -301,7 +307,7 @@ struct ElasticsearchIntegrationTests {
         #expect(retrievedItem.source.name == item.name)
     }
 
-    @Test
+    @Test("Bulk Update With Script")
     func testBulkUpdateWithScript() async throws {
         var items = [SomeItem]()
         for index in 1...10 {
@@ -338,7 +344,7 @@ struct ElasticsearchIntegrationTests {
         #expect(retrievedItem.source.count == 1)
     }
 
-    @Test
+    @Test("Update With Script")
     func testUpdateWithScript() async throws {
         let item = SomeItem(id: UUID(), name: "Some Item", count: 0)
         _ = try await client.createDocumentWithID(item, in: self.indexName)
@@ -364,7 +370,7 @@ struct ElasticsearchIntegrationTests {
         #expect(retrievedItem.source.count == 1)
     }
 
-    @Test
+    @Test("Update With Non-Existent Field Script")
     func testUpdateWithNonExistentFieldScript() async throws {
         let item = SomeItem(id: UUID(), name: "Some Item")
         _ = try await client.createDocumentWithID(item, in: self.indexName)
@@ -391,7 +397,7 @@ struct ElasticsearchIntegrationTests {
         #expect(retrievedItem.source.count == 1)
     }
 
-    @Test
+    @Test("Bulk Update With Non-Existent Field Script")
     func testBulkUpdateWithNonExistentFieldScript() async throws {
         var items = [SomeItem]()
         for index in 1...10 {
@@ -429,7 +435,7 @@ struct ElasticsearchIntegrationTests {
         #expect(retrievedItem.source.count == 1)
     }
 
-    @Test
+    @Test("Count With Query Body")
     func testCountWithQueryBody() async throws {
         try await setupItems()
 
@@ -456,7 +462,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.count == 5)
     }
 
-    @Test
+    @Test("Pagination Query With Query Body")
     func testPaginationQueryWithQueryBody() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -491,7 +497,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }) == true)
     }
 
-    @Test
+    @Test("Custom Search")
     func testCustomSearch() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -531,7 +537,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }) == true)
     }
 
-    @Test
+    @Test("Custom Search With Track Total Hits False")
     func testCustomSearchWithTrackTotalHitsFalse() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -579,7 +585,7 @@ struct ElasticsearchIntegrationTests {
         #expect(results.hits.hits.contains(where: { $0.source.name == "Some 29 Apples" }) == true)
     }
 
-    @Test
+    @Test("Custom Request")
     func testCustomRequest() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"
@@ -622,7 +628,7 @@ struct ElasticsearchIntegrationTests {
         #expect(count["value"] as! Double == 50.5)
     }
 
-    @Test
+    @Test("Custom Request With Query Items")
     func testCustomRequestWithQueryItems() async throws {
         // create index
         let mappings: [String: Any] = [
@@ -656,7 +662,7 @@ struct ElasticsearchIntegrationTests {
         #expect(deleteResponse.acknowledged == true)
     }
 
-    @Test
+    @Test("Custom Search With Data Query")
     func testCustomSearchWithDataQuery() async throws {
         for index in 1...100 {
             let name = "Some \(index) Apples"

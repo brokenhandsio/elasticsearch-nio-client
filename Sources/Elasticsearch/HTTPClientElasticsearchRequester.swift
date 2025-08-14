@@ -31,8 +31,10 @@ public struct HTTPClientElasticsearchRequester: ElasticsearchRequester {
         }
 
         if let body {
-            self.logger.trace("Request body: \(body)")
             clientRequest.body = body
+            self.logger.trace("Sending request", metadata: ["method": "\(method)", "headers": "\(headers)", "body": "\(body)"])
+        } else {
+            self.logger.trace("Sending request", metadata: ["method": "\(method)", "headers": "\(headers)", "body": "empty"])
         }
 
         return try await client.execute(clientRequest, timeout: .seconds(30))
