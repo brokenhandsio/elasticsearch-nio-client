@@ -19,7 +19,7 @@ jobs:
         env:
           discovery.type: single-node
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Test
       run: swift test
 
@@ -35,6 +35,6 @@ jobs:
           discovery.type: single-node
           xpack.security.enabled: false
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Test
       run: swift test
