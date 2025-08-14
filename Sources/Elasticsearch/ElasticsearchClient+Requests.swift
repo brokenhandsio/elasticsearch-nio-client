@@ -256,7 +256,8 @@ extension ElasticsearchClient {
         let url = try buildURL(path: path, queryItems: queryItems)
         var headers = HTTPFields()
         headers[.contentType] = "application/json"
-        let responseBody = try await sendRequest(url: url, method: method, headers: headers, body: .bytes(body)).collect(upTo: 1024 * 1024)
+        let response = try await sendRequest(url: url, method: method, headers: headers, body: .bytes(body))
+        let responseBody = try await response.body.collect(upTo: 1024 * 1024)
         return Data(buffer: responseBody)
     }
 }
