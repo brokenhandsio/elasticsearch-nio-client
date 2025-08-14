@@ -38,7 +38,6 @@ let (dockerResult, _) = shell(
     "-e", "discovery.type=single-node",
     "-e", "ES_JAVA_OPTS=-Xms256m -Xmx256m",
     "-e", "xpack.security.enabled=false",
-    "-e", "xpack.security.enrollment.enabled=false",
     "-d", "docker.elastic.co/elasticsearch/elasticsearch:9.1.0")
 
 guard dockerResult == 0 else {
