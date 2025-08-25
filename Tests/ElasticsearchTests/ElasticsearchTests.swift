@@ -13,7 +13,7 @@ struct ElasticsearchTests {
 
     init() async throws {
         httpClient = .shared
-        logger = Logger(label: "io.brokenhands.swift-soto-elasticsearch.test")
+        logger = Logger(label: "brokenhands.io.swift-soto-elasticsearch.test")
         logger.logLevel = .debug
         client = try ElasticsearchClient(httpClient: httpClient, logger: logger, scheme: "http", host: "localhost", port: 9200)
         if try await client.checkIndexExists(indexName) {

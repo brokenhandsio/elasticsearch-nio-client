@@ -141,7 +141,6 @@ public struct ElasticsearchClient {
         case 200...299:
             return clientResponse
         default:
-            let requestBody = try await body?.collect(upTo: 1024 * 1024) ?? .init()
             let responseBody = try await clientResponse.body.collect(upTo: 1024 * 1024)
             self.logger.trace(
                 "Sent request and received response",
@@ -149,7 +148,6 @@ public struct ElasticsearchClient {
                     "responseStatus": "\(clientResponse.status)",
                     "requestMethod": "\(method)",
                     "requestURL": "\(url)",
-                    "requestBody": "\(requestBody)",
                     "responseBody": "\(responseBody)",
                 ])
             throw ElasticsearchClientError(
@@ -161,10 +159,21 @@ public struct ElasticsearchClient {
         url: String,
         method: HTTPRequest.Method,
         headers: HTTPFields,
-        body: HTTPClientRequest.Body?
+        body: HTTPClientRequest.Body?,
+        maxBodySize: Int = 1024 * 1024 * 16
     ) async throws -> D {
         let response = try await sendRequest(url: url, method: method, headers: headers, body: body)
-        let bodyBytes = try await response.body.collect(upTo: 1024 * 1024)
+
+        let bodySize: Int
+        if let contentLengthString = response.headers["content-length"].first ?? response.headers["Content-Length"].first,
+            let contentLength = Int(contentLengthString)
+        {
+            bodySize = min(contentLength, maxBodySize)
+        } else {
+            bodySize = maxBodySize
+        }
+
+        let bodyBytes = try await response.body.collect(upTo: bodySize)
 
         let decodedResponse: D
         do {
