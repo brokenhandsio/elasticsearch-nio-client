@@ -160,20 +160,11 @@ public struct ElasticsearchClient {
         method: HTTPRequest.Method,
         headers: HTTPFields,
         body: HTTPClientRequest.Body?,
-        maxBodySize: Int = 1024 * 1024 * 16
+        maxBodySize: Int = 1024 * 1024
     ) async throws -> D {
         let response = try await sendRequest(url: url, method: method, headers: headers, body: body)
 
-        let bodySize: Int
-        if let contentLengthString = response.headers["content-length"].first ?? response.headers["Content-Length"].first,
-            let contentLength = Int(contentLengthString)
-        {
-            bodySize = min(contentLength, maxBodySize)
-        } else {
-            bodySize = maxBodySize
-        }
-
-        let bodyBytes = try await response.body.collect(upTo: bodySize)
+        let bodyBytes = try await response.body.collect(upTo: maxBodySize)
 
         let decodedResponse: D
         do {
