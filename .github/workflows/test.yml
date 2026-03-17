@@ -22,11 +22,13 @@ jobs:
         env:
           discovery.type: single-node
           xpack.security.enabled: false
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
         options: >-
-          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-cmd "curl -sf http://localhost:9200/_cluster/health"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 20
+          --health-start-period 60s
     steps:
       - uses: actions/checkout@v6
       - name: Test
