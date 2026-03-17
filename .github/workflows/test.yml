@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     name: Run Tests on Elasticsearch ${{ matrix.es-version }}
     strategy:
       matrix:
-        es-version: ['7.6.2', '8.4.1', '9.1.0']
+        es-version: ["7.6.2", "8.4.1", "9.1.0"]
     services:
       elasticsearch:
         image: "docker.elastic.co/elasticsearch/elasticsearch:${{ matrix.es-version }}"
@@ -23,7 +23,6 @@ jobs:
           discovery.type: single-node
           xpack.security.enabled: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Test
         run: swift test
-    

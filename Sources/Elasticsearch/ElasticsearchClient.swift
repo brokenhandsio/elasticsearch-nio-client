@@ -19,7 +19,7 @@ public struct ElasticsearchClient {
     let jsonDecoder: JSONDecoder
 
     public init(
-        httpClient: HTTPClient,
+        httpClient: HTTPClient = .shared,
         logger: Logger,
         url string: String,
         username: String? = nil,
@@ -41,7 +41,7 @@ public struct ElasticsearchClient {
     }
 
     public init(
-        httpClient: HTTPClient,
+        httpClient: HTTPClient = .shared,
         logger: Logger,
         url: URL,
         username: String? = nil,
@@ -76,7 +76,7 @@ public struct ElasticsearchClient {
     }
 
     public init(
-        httpClient: HTTPClient,
+        httpClient: HTTPClient = .shared,
         logger: Logger,
         scheme: String? = nil,
         host: String,
@@ -178,7 +178,8 @@ public struct ElasticsearchClient {
     }
 }
 
-//// MARK: - Helper
+// MARK: - Helper
+
 extension ElasticsearchClient {
     func buildURL(path: String, queryItems: [URLQueryItem] = []) throws -> String {
         var urlComponents = URLComponents()
